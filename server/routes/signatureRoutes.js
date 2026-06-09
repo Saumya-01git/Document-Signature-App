@@ -47,4 +47,25 @@ router.post("/", authMiddleware, async (req, res) => {
   }
 });
 
+// Get signatures for a document
+router.get("/:documentId", authMiddleware, async (req, res) => {
+  try {
+    const signatures = await Signature.find({
+      documentId: req.params.documentId,
+    });
+
+    res.status(200).json({
+      message: "Signatures fetched successfully",
+      count: signatures.length,
+      signatures,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch signatures",
+      error: error.message,
+    });
+  }
+});
+
+
 module.exports = router;
