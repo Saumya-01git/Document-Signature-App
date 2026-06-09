@@ -41,6 +41,14 @@ function App() {
           <h3>{doc.title}</h3>
           <p>Status: {doc.status}</p>
           <p>File: {doc.fileName}</p>
+
+<a
+  href={`http://localhost:5000/${doc.filePath}`}
+  target="_blank"
+  rel="noreferrer"
+>
+  View PDF
+</a>
         </div>
       ))}
     </div>
