@@ -55,5 +55,31 @@ router.get("/", authMiddleware, async (req, res) => {
   }
 });
 
+// Get single document by ID
+router.get("/:id", authMiddleware, async (req, res) => {
+  try {
+    const document = await Document.findOne({
+      _id: req.params.id,
+      owner: req.user.id,
+    });
+
+    if (!document) {
+      return res.status(404).json({
+        message: "Document not found",
+      });
+    }
+
+    res.status(200).json({
+      message: "Document fetched successfully",
+      document,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch document",
+      error: error.message,
+    });
+  }
+});
+
 module.exports = router;
 
