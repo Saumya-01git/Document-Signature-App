@@ -6,6 +6,7 @@ const connectDB = require("./config/db");
 const authMiddleware = require("./middleware/authMiddleware");
 const documentRoutes = require("./routes/documentRoutes");
 const path = require("path");
+const signatureRoutes = require("./routes/signatureRoutes");
 
 dotenv.config();
 connectDB();
@@ -18,6 +19,7 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/docs", documentRoutes);
+app.use("/api/signatures", signatureRoutes);
 
 app.get("/api/protected", authMiddleware, (req, res) => {
   res.json({
