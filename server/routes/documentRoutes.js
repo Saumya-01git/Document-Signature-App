@@ -35,4 +35,25 @@ router.post("/upload", authMiddleware, upload.single("pdf"), async (req, res) =>
   }
 });
 
+// Get all documents uploaded by logged-in user
+router.get("/", authMiddleware, async (req, res) => {
+  try {
+    const documents = await Document.find({ owner: req.user.id }).sort({
+      createdAt: -1,
+    });
+
+    res.status(200).json({
+      message: "Documents fetched successfully",
+      count: documents.length,
+      documents,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch documents",
+      error: error.message,
+    });
+  }
+});
+
 module.exports = router;
+
