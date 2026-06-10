@@ -67,5 +67,39 @@ router.get("/:documentId", authMiddleware, async (req, res) => {
   }
 });
 
+// Update signature coordinates after drag
+router.put("/:id", authMiddleware, async (req, res) => {
+  try {
+    const { x, y, page } = req.body;
+
+    const signature = await Signature.findOne({
+      _id: req.params.id,
+      signer: req.user.id,
+    });
+
+    if (!signature) {
+      return res.status(404).json({
+        message: "Signature not found or unauthorized",
+      });
+    }
+
+    signature.x = x;
+    signature.y = y;
+    if (page) signature.page = page;
+
+    await signature.save();
+
+    res.status(200).json({
+      message: "Signature coordinates updated successfully",
+      signature,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to update signature coordinates",
+      error: error.message,
+    });
+  }
+});
+
 
 module.exports = router;
