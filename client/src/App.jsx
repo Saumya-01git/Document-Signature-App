@@ -3,6 +3,7 @@ import axios from "axios";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
+import { DndContext } from "@dnd-kit/core";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -16,6 +17,7 @@ function App() {
   const [signatures, setSignatures] = useState([]);
   const [numPages, setNumPages] = useState(null);
   const [placingSignature, setPlacingSignature] = useState(false);
+  const [dragPosition, setDragPosition] = useState(null);
 
   const fetchDocuments = async () => {
     try {
@@ -91,6 +93,15 @@ setSignatures(res.data.signatures);
   }
 };
 
+const handleDragEnd = (event) => {
+  const { delta } = event;
+
+  setDragPosition((prev) => ({
+    x: (prev?.x || 0) + delta.x,
+    y: (prev?.y || 0) + delta.y,
+  }));
+};
+
 
   return (
     <div className="min-h-screen bg-slate-100 p-6">
@@ -151,6 +162,7 @@ setSignatures(res.data.signatures);
             </h2>
 
             <div className="border rounded bg-gray-200 p-4 overflow-auto max-h-[800px]">
+              <DndContext onDragEnd={handleDragEnd}>
               <Document
                 file={`http://localhost:5000/${selectedDoc.filePath}`}
                 onLoadSuccess={({ numPages }) => setNumPages(numPages)}
@@ -180,6 +192,7 @@ setSignatures(res.data.signatures);
                   </div>
                 ))}
               </Document>
+              </DndContext>
             </div>
           </div>
         )}
