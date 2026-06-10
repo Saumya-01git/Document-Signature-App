@@ -121,20 +121,46 @@ setSignatures(res.data.signatures);
   }
 };
 
-const handleDragEnd = (event) => {
+const handleDragEnd = async (event) => {
   const { active, delta } = event;
+
+  const draggedSignature = signatures.find((sig) => sig._id === active.id);
+
+  if (!draggedSignature) return;
+
+  const updatedX = draggedSignature.x + delta.x;
+  const updatedY = draggedSignature.y + delta.y;
 
   setSignatures((prev) =>
     prev.map((sig) =>
       sig._id === active.id
         ? {
             ...sig,
-            x: sig.x + delta.x,
-            y: sig.y + delta.y,
+            x: updatedX,
+            y: updatedY,
           }
         : sig
     )
   );
+
+  try {
+    await axios.put(
+      `http://localhost:5000/api/signatures/${active.id}`,
+      {
+        x: updatedX,
+        y: updatedY,
+        page: draggedSignature.page,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+  } catch (error) {
+    console.log(error);
+    alert("Failed to save dragged position");
+  }
 };
 
 
