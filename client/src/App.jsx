@@ -1,20 +1,26 @@
 import { useState } from "react";
 import axios from "axios";
+import { Document, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
+
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url
+).toString();
 
 function App() {
   const [token, setToken] = useState("");
   const [documents, setDocuments] = useState([]);
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [signatures, setSignatures] = useState([]);
+  const [numPages, setNumPages] = useState(null);
 
   const fetchDocuments = async () => {
     try {
       const res = await axios.get("http://localhost:5000/api/docs", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
-
       setDocuments(res.data.documents);
     } catch (error) {
       alert("Failed to fetch documents");
@@ -25,13 +31,12 @@ function App() {
   const openDocument = async (doc) => {
     try {
       setSelectedDoc(doc);
+      setNumPages(null);
 
       const res = await axios.get(
         `http://localhost:5000/api/signatures/${doc._id}`,
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
@@ -92,25 +97,32 @@ function App() {
               Preview: {selectedDoc.title}
             </h2>
 
-            <div className="relative border rounded overflow-hidden bg-gray-200">
-              <iframe
-                src={`http://localhost:5000/${selectedDoc.filePath}`}
-                title="PDF Preview"
-                className="w-full h-[700px]"
-              />
+            <div className="border rounded bg-gray-200 p-4 overflow-auto">
+              <Document
+                file={`http://localhost:5000/${selectedDoc.filePath}`}
+                onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+              >
+                {Array.from(new Array(numPages), (_, index) => (
+                  <div key={index + 1} className="relative mb-6 inline-block">
+                    <Page pageNumber={index + 1} width={700} />
 
-              {signatures.map((sig) => (
-                <div
-                  key={sig._id}
-                  className="absolute border-2 border-red-500 bg-red-100 text-red-700 px-3 py-2 rounded"
-                  style={{
-                    left: `${sig.x}px`,
-                    top: `${sig.y}px`,
-                  }}
-                >
-                  Signature Here
-                </div>
-              ))}
+                    {signatures
+                      .filter((sig) => sig.page === index + 1)
+                      .map((sig) => (
+                        <div
+                          key={sig._id}
+                          className="absolute border-2 border-red-500 bg-red-100 text-red-700 px-3 py-2 rounded"
+                          style={{
+                            left: `${sig.x}px`,
+                            top: `${sig.y}px`,
+                          }}
+                        >
+                          Signature Here
+                        </div>
+                      ))}
+                  </div>
+                ))}
+              </Document>
             </div>
           </div>
         )}
