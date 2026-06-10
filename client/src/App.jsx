@@ -15,6 +15,7 @@ function App() {
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [signatures, setSignatures] = useState([]);
   const [numPages, setNumPages] = useState(null);
+  const [placingSignature, setPlacingSignature] = useState(false);
 
   const fetchDocuments = async () => {
     try {
@@ -46,6 +47,40 @@ function App() {
       console.log(error);
     }
   };
+  
+  const handlePdfClick = async (e, pageNumber) => {
+  if (!placingSignature || !selectedDoc) return;
+
+  const rect = e.currentTarget.getBoundingClientRect();
+
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  try {
+    await axios.post(
+      "http://localhost:5000/api/signatures",
+      {
+        documentId: selectedDoc._id,
+        x,
+        y,
+        page: pageNumber,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    alert("Signature placed successfully");
+    setPlacingSignature(false);
+    openDocument(selectedDoc);
+  } catch (error) {
+    console.log(error);
+    alert("Failed to place signature");
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-slate-100 p-6">
@@ -66,6 +101,14 @@ function App() {
         >
           Fetch My Documents
         </button>
+
+        <button
+  className="bg-purple-600 text-white px-4 py-2 rounded ml-3"
+  onClick={() => setPlacingSignature(true)}
+>
+  Place Signature
+</button>
+
 
         <h2 className="text-xl font-semibold mb-3">Uploaded Documents</h2>
 
@@ -97,13 +140,17 @@ function App() {
               Preview: {selectedDoc.title}
             </h2>
 
-            <div className="border rounded bg-gray-200 p-4 overflow-auto">
+            <div className="border rounded bg-gray-200 p-4 overflow-auto max-h-[800px]">
               <Document
                 file={`http://localhost:5000/${selectedDoc.filePath}`}
                 onLoadSuccess={({ numPages }) => setNumPages(numPages)}
               >
                 {Array.from(new Array(numPages), (_, index) => (
-                  <div key={index + 1} className="relative mb-6 inline-block">
+                  <div
+  key={index + 1}
+  className="relative mb-6 inline-block cursor-crosshair"
+  onClick={(e) => handlePdfClick(e, index + 1)}
+>
                     <Page pageNumber={index + 1} width={700} />
 
                     {signatures
