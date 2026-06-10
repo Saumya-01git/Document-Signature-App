@@ -74,7 +74,17 @@ function App() {
 
     alert("Signature placed successfully");
     setPlacingSignature(false);
-    openDocument(selectedDoc);
+
+const res = await axios.get(
+  `http://localhost:5000/api/signatures/${selectedDoc._id}`,
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
+
+setSignatures(res.data.signatures);
   } catch (error) {
     console.log(error);
     alert("Failed to place signature");
