@@ -3,12 +3,40 @@ import axios from "axios";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
-import { DndContext } from "@dnd-kit/core";
+import { DndContext, useDraggable } from "@dnd-kit/core";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
   import.meta.url
 ).toString();
+
+function DraggableSignature({ sig }) {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id: sig._id,
+  });
+
+  const style = {
+    left: `${sig.x}px`,
+    top: `${sig.y}px`,
+    transform: transform
+      ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
+      : undefined,
+  };
+
+  return (
+    <div
+  ref={setNodeRef}
+  {...listeners}
+  {...attributes}
+  onClick={(e) => e.stopPropagation()}
+  className="absolute z-20 border-2 border-red-500 bg-red-100 text-red-700 px-3 py-2 rounded cursor-move select-none touch-none"
+  style={style}
+>
+      Signature Here
+    </div>
+  );
+}
+
 
 function App() {
   const [token, setToken] = useState("");
@@ -94,12 +122,19 @@ setSignatures(res.data.signatures);
 };
 
 const handleDragEnd = (event) => {
-  const { delta } = event;
+  const { active, delta } = event;
 
-  setDragPosition((prev) => ({
-    x: (prev?.x || 0) + delta.x,
-    y: (prev?.y || 0) + delta.y,
-  }));
+  setSignatures((prev) =>
+    prev.map((sig) =>
+      sig._id === active.id
+        ? {
+            ...sig,
+            x: sig.x + delta.x,
+            y: sig.y + delta.y,
+          }
+        : sig
+    )
+  );
 };
 
 
@@ -178,16 +213,7 @@ const handleDragEnd = (event) => {
                     {signatures
                       .filter((sig) => sig.page === index + 1)
                       .map((sig) => (
-                        <div
-                          key={sig._id}
-                          className="absolute border-2 border-red-500 bg-red-100 text-red-700 px-3 py-2 rounded"
-                          style={{
-                            left: `${sig.x}px`,
-                            top: `${sig.y}px`,
-                          }}
-                        >
-                          Signature Here
-                        </div>
+                        <DraggableSignature key={sig._id} sig={sig} />
                       ))}
                   </div>
                 ))}
