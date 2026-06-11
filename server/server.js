@@ -32,6 +32,14 @@ app.get("/", (req, res) => {
   res.send("Document Signature App Backend Running");
 });
 
+app.get("/api/health", (req, res) => {
+  res.status(200).json({
+    status: "OK",
+    message: "SignFlow API is running",
+    timestamp: new Date(),
+  });
+});
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
