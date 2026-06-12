@@ -45,4 +45,25 @@ router.post("/", authMiddleware, async (req, res) => {
   }
 });
 
+// Get all signing requests created by user
+router.get("/", authMiddleware, async (req, res) => {
+  try {
+    const requests = await SignRequest.find({
+      sender: req.user.id,
+    });
+
+    res.status(200).json({
+      message: "Signing requests fetched successfully",
+      count: requests.length,
+      requests,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch signing requests",
+      error: error.message,
+    });
+  }
+});
+
+
 module.exports = router;
