@@ -65,5 +65,28 @@ router.get("/", authMiddleware, async (req, res) => {
   }
 });
 
+// Get single signing request
+router.get("/:id", authMiddleware, async (req, res) => {
+  try {
+    const request = await SignRequest.findById(req.params.id);
+
+    if (!request) {
+      return res.status(404).json({
+        message: "Signing request not found",
+      });
+    }
+
+    res.status(200).json({
+      message: "Signing request fetched successfully",
+      request,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch signing request",
+      error: error.message,
+    });
+  }
+});
+
 
 module.exports = router;
