@@ -2,6 +2,9 @@ const express = require("express");
 const Signature = require("../models/Signature");
 const Document = require("../models/Document");
 const authMiddleware = require("../middleware/authMiddleware");
+const fs = require("fs");
+const path = require("path");
+const { PDFDocument, rgb } = require("pdf-lib");
 
 const router = express.Router();
 
@@ -96,6 +99,83 @@ router.put("/:id", authMiddleware, async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to update signature coordinates",
+      error: error.message,
+    });
+  }
+});
+
+// Generate final signed PDF
+router.post("/finalize", authMiddleware, async (req, res) => {
+  try {
+    const { documentId } = req.body;
+
+    const document = await Document.findOne({
+      _id: documentId,
+      owner: req.user.id,
+    });
+
+    if (!document) {
+      return res.status(404).json({
+        message: "Document not found or unauthorized",
+      });
+    }
+
+    const signatures = await Signature.find({ documentId });
+
+    if (signatures.length === 0) {
+      return res.status(400).json({
+        message: "No signatures found for this document",
+      });
+    }
+
+    const pdfPath = path.join(__dirname, "..", document.filePath);
+    const pdfBytes = fs.readFileSync(pdfPath);
+
+    const pdfDoc = await PDFDocument.load(pdfBytes);
+
+    signatures.forEach((sig) => {
+      const page = pdfDoc.getPages()[sig.page - 1];
+
+      if (page) {
+        const pageHeight = page.getHeight();
+
+        page.drawText("Signed by SignFlow", {
+          x: sig.x,
+          y: pageHeight - sig.y - 20,
+          size: 14,
+          color: rgb(1, 0, 0),
+        });
+      }
+    });
+
+    const signedPdfBytes = await pdfDoc.save();
+
+    const signedDir = path.join(__dirname, "..", "uploads", "signed");
+
+    if (!fs.existsSync(signedDir)) {
+      fs.mkdirSync(signedDir);
+    }
+
+    const signedFileName = `signed-${Date.now()}-${document.fileName}`;
+    const signedFilePath = path.join(signedDir, signedFileName);
+
+    fs.writeFileSync(signedFilePath, signedPdfBytes);
+
+    document.status = "Signed";
+    await document.save();
+
+    await Signature.updateMany(
+      { documentId },
+      { status: "Signed" }
+    );
+
+    res.status(200).json({
+      message: "Final signed PDF generated successfully",
+      signedPdf: `uploads/signed/${signedFileName}`,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to generate signed PDF",
       error: error.message,
     });
   }
