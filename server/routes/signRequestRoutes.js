@@ -2,6 +2,7 @@ const express = require("express");
 const SignRequest = require("../models/SignRequest");
 const Document = require("../models/Document");
 const authMiddleware = require("../middleware/authMiddleware");
+const crypto = require("crypto");
 
 const router = express.Router();
 
@@ -26,12 +27,19 @@ router.post("/", authMiddleware, async (req, res) => {
         message: "Document not found or unauthorized",
       });
     }
+    
+    const signingToken = crypto.randomBytes(32).toString("hex");
+
+const signingLink = `http://localhost:5173/sign/${signingToken}`;
+
 
     const signRequest = await SignRequest.create({
-      documentId,
-      sender: req.user.id,
-      signerEmail,
-    });
+  documentId,
+  sender: req.user.id,
+  signerEmail,
+  signingToken,
+  signingLink,
+});
 
     res.status(201).json({
       message: "Signing request created successfully",
