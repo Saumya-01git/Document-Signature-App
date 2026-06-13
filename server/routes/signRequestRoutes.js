@@ -73,28 +73,35 @@ router.get("/", authMiddleware, async (req, res) => {
   }
 });
 
-// Get single signing request
-router.get("/:id", authMiddleware, async (req, res) => {
+// Get document through signing token
+router.get("/public/:token/document", async (req, res) => {
   try {
-    const request = await SignRequest.findById(req.params.id);
+    const request = await SignRequest.findOne({
+      signingToken: req.params.token,
+    });
 
     if (!request) {
       return res.status(404).json({
-        message: "Signing request not found",
+        message: "Invalid signing link",
       });
     }
 
+    const document = await Document.findById(
+      request.documentId
+    );
+
     res.status(200).json({
-      message: "Signing request fetched successfully",
-      request,
+      message: "Document fetched successfully",
+      document,
     });
   } catch (error) {
     res.status(500).json({
-      message: "Failed to fetch signing request",
+      message: "Failed to fetch document",
       error: error.message,
     });
   }
 });
+
 
 // Public access by signing token
 router.get("/public/:token", async (req, res) => {
@@ -120,5 +127,29 @@ router.get("/public/:token", async (req, res) => {
     });
   }
 });
+
+// Get single signing request
+router.get("/:id", authMiddleware, async (req, res) => {
+  try {
+    const request = await SignRequest.findById(req.params.id);
+
+    if (!request) {
+      return res.status(404).json({
+        message: "Signing request not found",
+      });
+    }
+
+    res.status(200).json({
+      message: "Signing request fetched successfully",
+      request,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch signing request",
+      error: error.message,
+    });
+  }
+});
+
 
 module.exports = router;
