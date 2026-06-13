@@ -96,5 +96,29 @@ router.get("/:id", authMiddleware, async (req, res) => {
   }
 });
 
+// Public access by signing token
+router.get("/public/:token", async (req, res) => {
+  try {
+    const request = await SignRequest.findOne({
+      signingToken: req.params.token,
+    });
+
+    if (!request) {
+      return res.status(404).json({
+        message: "Invalid signing link",
+      });
+    }
+
+    res.status(200).json({
+      message: "Signing link valid",
+      request,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to verify signing link",
+      error: error.message,
+    });
+  }
+});
 
 module.exports = router;
