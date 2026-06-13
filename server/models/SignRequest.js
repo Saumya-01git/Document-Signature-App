@@ -19,6 +19,15 @@ const signRequestSchema = new mongoose.Schema(
       required: true,
     },
 
+    signingToken: {
+  type: String,
+  required: true,
+},
+
+signingLink: {
+  type: String,
+},
+
     status: {
       type: String,
       enum: ["Pending", "Signed"],
