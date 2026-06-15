@@ -6,6 +6,7 @@ function PublicSignPage() {
   const { token } = useParams();
 
   const [request, setRequest] = useState(null);
+  const [documentData, setDocumentData] = useState(null);
 
   useEffect(() => {
     const validateToken = async () => {
@@ -15,6 +16,11 @@ function PublicSignPage() {
         );
 
         setRequest(res.data.request);
+        const docRes = await axios.get(
+  `http://localhost:5000/api/sign-requests/public/${token}/document`
+);
+
+setDocumentData(docRes.data.document);
       } catch (error) {
         console.log(error);
       }
@@ -42,6 +48,17 @@ function PublicSignPage() {
           <p>
             Status: {request.status}
           </p>
+          {documentData && (
+  <div className="mt-4 border p-4 rounded">
+    <h2 className="font-bold text-lg">
+      Document Details
+    </h2>
+
+    <p>Title: {documentData.title}</p>
+    <p>File Name: {documentData.fileName}</p>
+    <p>Status: {documentData.status}</p>
+  </div>
+)}
         </div>
       )}
     </div>
