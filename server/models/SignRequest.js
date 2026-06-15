@@ -28,11 +28,16 @@ signingLink: {
   type: String,
 },
 
-    status: {
-      type: String,
-      enum: ["Pending", "Signed"],
-      default: "Pending",
-    },
+   status: {
+  type: String,
+  enum: ["Pending", "Signed", "Rejected"],
+  default: "Pending",
+},
+
+rejectionReason: {
+  type: String,
+  default: "",
+},
   },
   {
     timestamps: true,
