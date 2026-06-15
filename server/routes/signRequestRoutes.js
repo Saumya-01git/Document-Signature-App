@@ -53,6 +53,44 @@ const signingLink = `http://localhost:5173/sign/${signingToken}`;
   }
 });
 
+
+// Update signing request status
+router.put("/public/:token/status", async (req, res) => {
+  try {
+    const { status, rejectionReason } = req.body;
+
+    const request = await SignRequest.findOne({
+      signingToken: req.params.token,
+    });
+
+    if (!request) {
+      return res.status(404).json({
+        message: "Invalid signing link",
+      });
+    }
+
+    request.status = status;
+
+    if (status === "Rejected") {
+      request.rejectionReason =
+        rejectionReason || "";
+    }
+
+    await request.save();
+
+    res.status(200).json({
+      message: "Signing request updated successfully",
+      request,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to update signing request",
+      error: error.message,
+    });
+  }
+});
+
+
 // Get all signing requests created by user
 router.get("/", authMiddleware, async (req, res) => {
   try {
