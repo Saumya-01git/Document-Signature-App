@@ -15,6 +15,8 @@ function PublicSignPage() {
   const [request, setRequest] = useState(null);
   const [documentData, setDocumentData] = useState(null);
   const [numPages, setNumPages] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+
   const handleApprove = async () => {
   try {
     await axios.put(
@@ -25,6 +27,28 @@ function PublicSignPage() {
     );
 
     alert("Document signed successfully");
+
+    const res = await axios.get(
+      `http://localhost:5000/api/sign-requests/public/${token}`
+    );
+
+    setRequest(res.data.request);
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+const handleReject = async () => {
+  try {
+    await axios.put(
+      `http://localhost:5000/api/sign-requests/public/${token}/status`,
+      {
+        status: "Rejected",
+        rejectionReason,
+      }
+    );
+
+    alert("Document rejected");
 
     const res = await axios.get(
       `http://localhost:5000/api/sign-requests/public/${token}`
@@ -85,6 +109,29 @@ setDocumentData(docRes.data.document);
     Approve & Sign
   </button>
 )}
+
+{request.status === "Pending" && (
+  <>
+    <input
+      type="text"
+      placeholder="Reason for rejection"
+      value={rejectionReason}
+      onChange={(e) =>
+        setRejectionReason(e.target.value)
+      }
+      className="border p-2 rounded ml-3"
+    />
+
+    <button
+      onClick={handleReject}
+      className="ml-3 bg-red-600 text-white px-4 py-2 rounded"
+    >
+      Reject
+    </button>
+  </>
+)}
+
+
           {documentData && (
   <div className="mt-4 border p-4 rounded">
     <h2 className="font-bold text-lg">
