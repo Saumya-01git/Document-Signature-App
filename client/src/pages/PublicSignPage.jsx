@@ -15,6 +15,26 @@ function PublicSignPage() {
   const [request, setRequest] = useState(null);
   const [documentData, setDocumentData] = useState(null);
   const [numPages, setNumPages] = useState(null);
+  const handleApprove = async () => {
+  try {
+    await axios.put(
+      `http://localhost:5000/api/sign-requests/public/${token}/status`,
+      {
+        status: "Signed",
+      }
+    );
+
+    alert("Document signed successfully");
+
+    const res = await axios.get(
+      `http://localhost:5000/api/sign-requests/public/${token}`
+    );
+
+    setRequest(res.data.request);
+  } catch (error) {
+    console.log(error);
+  }
+};
 
   useEffect(() => {
     const validateToken = async () => {
@@ -27,6 +47,7 @@ function PublicSignPage() {
         const docRes = await axios.get(
   `http://localhost:5000/api/sign-requests/public/${token}/document`
 );
+
 
 setDocumentData(docRes.data.document);
       } catch (error) {
@@ -56,6 +77,14 @@ setDocumentData(docRes.data.document);
           <p>
             Status: {request.status}
           </p>
+          {request.status === "Pending" && (
+  <button
+    onClick={handleApprove}
+    className="mt-3 bg-green-600 text-white px-4 py-2 rounded"
+  >
+    Approve & Sign
+  </button>
+)}
           {documentData && (
   <div className="mt-4 border p-4 rounded">
     <h2 className="font-bold text-lg">
