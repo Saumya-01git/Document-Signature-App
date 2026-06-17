@@ -8,6 +8,7 @@ const documentRoutes = require("./routes/documentRoutes");
 const path = require("path");
 const signatureRoutes = require("./routes/signatureRoutes");
 const signRequestRoutes = require("./routes/signRequestRoutes");
+const auditRoutes = require("./routes/auditRoutes");
 
 dotenv.config();
 connectDB();
@@ -22,6 +23,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/docs", documentRoutes);
 app.use("/api/signatures", signatureRoutes);
 app.use("/api/sign-requests", signRequestRoutes);
+app.use("/api/audit", auditRoutes);
 
 app.get("/api/protected", authMiddleware, (req, res) => {
   res.json({
