@@ -3,6 +3,7 @@ const SignRequest = require("../models/SignRequest");
 const Document = require("../models/Document");
 const authMiddleware = require("../middleware/authMiddleware");
 const crypto = require("crypto");
+const AuditLog = require("../models/AuditLog");
 
 const router = express.Router();
 
@@ -77,6 +78,13 @@ router.put("/public/:token/status", async (req, res) => {
     }
 
     await request.save();
+
+    await AuditLog.create({
+  documentId: request.documentId,
+  action: `Signing request ${status}`,
+  userEmail: request.signerEmail,
+  ipAddress: req.ip,
+});
 
     res.status(200).json({
       message: "Signing request updated successfully",
