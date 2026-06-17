@@ -4,14 +4,21 @@ const Document = require("../models/Document");
 const authMiddleware = require("../middleware/authMiddleware");
 const fs = require("fs");
 const path = require("path");
-const { PDFDocument, rgb } = require("pdf-lib");
-
+const { PDFDocument, rgb, degrees } = require("pdf-lib");
 const router = express.Router();
 
 // Save signature position
 router.post("/", authMiddleware, async (req, res) => {
   try {
-    const { documentId, x, y, page } = req.body;
+    const {
+  documentId,
+  x,
+  y,
+  page,
+  signatureText,
+  fontStyle,
+  rotation,
+} = req.body;
 
     if (!documentId || x === undefined || y === undefined) {
       return res.status(400).json({
@@ -36,6 +43,9 @@ router.post("/", authMiddleware, async (req, res) => {
       x,
       y,
       page: page || 1,
+      signatureText: signatureText || "Signed by SignFlow",
+      fontStyle: fontStyle || "Arial",
+      rotation: rotation || 0,
     });
 
     res.status(201).json({
@@ -73,7 +83,7 @@ router.get("/:documentId", authMiddleware, async (req, res) => {
 // Update signature coordinates after drag
 router.put("/:id", authMiddleware, async (req, res) => {
   try {
-    const { x, y, page } = req.body;
+    const { x, y, page, signatureText, fontStyle, rotation } = req.body;
 
     const signature = await Signature.findOne({
       _id: req.params.id,
@@ -89,6 +99,9 @@ router.put("/:id", authMiddleware, async (req, res) => {
     signature.x = x;
     signature.y = y;
     if (page) signature.page = page;
+    if (signatureText !== undefined) signature.signatureText = signatureText;
+    if (fontStyle !== undefined) signature.fontStyle = fontStyle;
+    if (rotation !== undefined) signature.rotation = rotation;
 
     await signature.save();
 
@@ -139,10 +152,11 @@ router.post("/finalize", authMiddleware, async (req, res) => {
       if (page) {
         const pageHeight = page.getHeight();
 
-        page.drawText("Signed by SignFlow", {
+        page.drawText(sig.signatureText || "Signed by SignFlow", {
           x: sig.x,
           y: pageHeight - sig.y - 20,
-          size: 14,
+          size: 18,
+          rotate: degrees(sig.rotation || 0),
           color: rgb(1, 0, 0),
         });
       }
