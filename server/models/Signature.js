@@ -34,6 +34,20 @@ const signatureSchema = new mongoose.Schema(
       enum: ["Pending", "Signed", "Rejected"],
       default: "Pending",
     },
+    signatureText: {
+  type: String,
+  default: "",
+},
+
+fontStyle: {
+  type: String,
+  default: "Arial",
+},
+
+rotation: {
+  type: Number,
+  default: 0,
+},
   },
   {
     timestamps: true,
