@@ -70,14 +70,26 @@ router.put("/public/:token/status", async (req, res) => {
       });
     }
 
-    request.status = status;
+    if (!["Pending", "Signed", "Rejected"].includes(status)) {
+  return res.status(400).json({
+    message: "Invalid status value",
+  });
+}
 
-    if (status === "Rejected") {
-      request.rejectionReason =
-        rejectionReason || "";
-    }
+request.status = status;
 
-    await request.save();
+if (status === "Rejected") {
+  request.rejectionReason = rejectionReason || "";
+} else {
+  request.rejectionReason = "";
+}
+
+await request.save();
+
+
+await Document.findByIdAndUpdate(request.documentId, {
+  status,
+});
 
     await AuditLog.create({
   documentId: request.documentId,
