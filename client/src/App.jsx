@@ -277,9 +277,12 @@ const createSigningRequest = async () => {
     const res = await axios.post(
       "http://localhost:5000/api/sign-requests",
       {
-        documentId: selectedDoc._id,
-        signerEmail,
-      },
+  documentId: selectedDoc._id,
+  signerEmails: signerEmail
+    .split(",")
+    .map((email) => email.trim())
+    .filter((email) => email !== ""),
+},
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -288,7 +291,13 @@ const createSigningRequest = async () => {
     );
 
     setSigningLink(res.data.signRequest.signingLink);
-    alert(`Signing link sent successfully to ${signerEmail}`);
+    if (res.data.count === 1) {
+  alert("Signing link sent successfully to the signer email");
+} else {
+  alert(
+    `Signing links sent successfully to ${res.data.count} signers`
+  );
+}
  } catch (error) {
   console.log("FULL ERROR:", error);
   console.log("BACKEND RESPONSE:", error.response?.data);
@@ -717,13 +726,19 @@ const fetchAuditLogs = async () => {
   <h3 className="font-semibold mb-2">Create Signing Request</h3>
 
   <div className="grid gap-3 md:grid-cols-3">
-    <input
-      className="border p-2 rounded"
-      type="email"
-      placeholder="Signer email"
-      value={signerEmail}
-      onChange={(e) => setSignerEmail(e.target.value)}
-    />
+    <div className="flex flex-col">
+  <input
+    className="border p-2 rounded"
+    type="text"
+    placeholder="Signer email(s)"
+    value={signerEmail}
+    onChange={(e) => setSignerEmail(e.target.value)}
+  />
+
+  <p className="text-xs text-gray-500 mt-1">
+    Multiple signers: separate emails with commas
+  </p>
+</div>
 
     <button
   className={`px-4 py-2 rounded text-white ${
