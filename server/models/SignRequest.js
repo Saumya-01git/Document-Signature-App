@@ -38,6 +38,9 @@ rejectionReason: {
   type: String,
   default: "",
 },
+expiresAt: {
+  type: Date,
+},
   },
   {
     timestamps: true,

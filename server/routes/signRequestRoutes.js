@@ -44,6 +44,8 @@ router.post("/", authMiddleware, async (req, res) => {
       const signingToken = crypto.randomBytes(32).toString("hex");
 
       const signingLink = `http://localhost:5173/sign/${signingToken}`;
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
 
       const signRequest = await SignRequest.create({
         documentId,
@@ -51,6 +53,7 @@ router.post("/", authMiddleware, async (req, res) => {
         signerEmail: email,
         signingToken,
         signingLink,
+        expiresAt,
       });
 
       await sendSigningEmail(email, signingLink);
@@ -98,6 +101,11 @@ router.put("/public/:token/status", async (req, res) => {
         message: "Invalid signing link",
       });
     }
+    if (request.expiresAt && new Date() > request.expiresAt) {
+  return res.status(400).json({
+    message: "Signing link has expired",
+  });
+}
 
     if (!["Pending", "Signed", "Rejected"].includes(status)) {
   return res.status(400).json({
@@ -218,6 +226,11 @@ router.get("/public/:token/document", async (req, res) => {
         message: "Invalid signing link",
       });
     }
+    if (request.expiresAt && new Date() > request.expiresAt) {
+  return res.status(400).json({
+    message: "Signing link has expired",
+  });
+}
 
     const document = await Document.findById(
       request.documentId
@@ -247,6 +260,11 @@ router.get("/public/:token/signatures", async (req, res) => {
         message: "Invalid signing link",
       });
     }
+    if (request.expiresAt && new Date() > request.expiresAt) {
+  return res.status(400).json({
+    message: "Signing link has expired",
+  });
+}
 
     const signatures = await Signature.find({
       documentId: request.documentId,
@@ -278,6 +296,11 @@ router.get("/public/:token", async (req, res) => {
         message: "Invalid signing link",
       });
     }
+    if (request.expiresAt && new Date() > request.expiresAt) {
+  return res.status(400).json({
+    message: "Signing link has expired",
+  });
+}
 
     res.status(200).json({
       message: "Signing link valid",
