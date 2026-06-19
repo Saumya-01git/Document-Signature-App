@@ -66,6 +66,7 @@ function App() {
   const [signatureText, setSignatureText] = useState("");
   const [fontStyle, setFontStyle] = useState("Arial");
   const [rotation, setRotation] = useState(0);
+  const [signedPdfLink, setSignedPdfLink] = useState("");
 
   const fetchDocuments = async () => {
   console.log("Fetch My Documents clicked");
@@ -338,6 +339,35 @@ const deleteSignRequest = async (id) => {
   }
 };
 
+const finalizeDocument = async () => {
+  if (!selectedDoc) {
+    alert("Please open/select a document first");
+    return;
+  }
+
+  try {
+    const res = await axios.post(
+      "http://localhost:5000/api/signatures/finalize",
+      {
+        documentId: selectedDoc._id,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    const link = `http://localhost:5000/${res.data.signedPdf}`;
+    setSignedPdfLink(link);
+
+    alert("Final signed PDF generated");
+  } catch (error) {
+    console.log(error);
+    alert("Failed to generate signed PDF");
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-slate-100 p-6">
@@ -602,6 +632,22 @@ const deleteSignRequest = async (id) => {
             <h2 className="text-xl font-semibold mb-3">
               Preview: {selectedDoc.title}
             </h2>
+            <button
+  className="bg-emerald-600 text-white px-4 py-2 rounded mb-4"
+  onClick={finalizeDocument}
+>
+  Finalize & Generate Signed PDF
+</button>
+
+{signedPdfLink && (
+  <a
+    href={signedPdfLink}
+    target="_blank"
+    className="ml-3 bg-blue-700 text-white px-4 py-2 rounded inline-block"
+  >
+    Download Signed PDF
+  </a>
+)}
             {selectedDoc.status === "Rejected" && (
               <div className="mb-4 border border-red-300 bg-red-50 text-red-700 p-3 rounded">
                 This document was rejected earlier. You can review it, make changes if needed, and generate a new signing request.
