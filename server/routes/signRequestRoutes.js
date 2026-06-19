@@ -4,6 +4,7 @@ const Document = require("../models/Document");
 const authMiddleware = require("../middleware/authMiddleware");
 const crypto = require("crypto");
 const AuditLog = require("../models/AuditLog");
+const Signature = require("../models/Signature");
 
 const router = express.Router();
 
@@ -58,7 +59,16 @@ const signingLink = `http://localhost:5173/sign/${signingToken}`;
 // Update signing request status
 router.put("/public/:token/status", async (req, res) => {
   try {
-    const { status, rejectionReason } = req.body;
+    const {
+  status,
+  rejectionReason,
+  signatureText,
+  fontStyle,
+  rotation,
+  x,
+  y,
+  page,
+} = req.body;
 
     const request = await SignRequest.findOne({
       signingToken: req.params.token,
@@ -77,6 +87,26 @@ router.put("/public/:token/status", async (req, res) => {
 }
 
 request.status = status;
+
+if (status === "Signed") {
+  if (!signatureText || x === undefined || y === undefined) {
+    return res.status(400).json({
+      message: "Signature text and position are required before signing",
+    });
+  }
+
+  await Signature.create({
+    documentId: request.documentId,
+    signer: request.sender,
+    x,
+    y,
+    page: page || 1,
+    signatureText,
+    fontStyle: fontStyle || "Arial",
+    rotation: rotation || 0,
+    status: "Signed",
+  });
+}
 
 if (status === "Rejected") {
   request.rejectionReason = rejectionReason || "";
@@ -155,6 +185,36 @@ router.get("/public/:token/document", async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to fetch document",
+      error: error.message,
+    });
+  }
+});
+
+// Get existing signatures through signing token
+router.get("/public/:token/signatures", async (req, res) => {
+  try {
+    const request = await SignRequest.findOne({
+      signingToken: req.params.token,
+    });
+
+    if (!request) {
+      return res.status(404).json({
+        message: "Invalid signing link",
+      });
+    }
+
+    const signatures = await Signature.find({
+      documentId: request.documentId,
+    });
+
+    res.status(200).json({
+      message: "Signatures fetched successfully",
+      count: signatures.length,
+      signatures,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch signatures",
       error: error.message,
     });
   }
