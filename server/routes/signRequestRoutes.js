@@ -272,6 +272,35 @@ router.get("/public/:token", async (req, res) => {
   }
 });
 
+
+// Delete signing request
+router.delete("/:id", authMiddleware, async (req, res) => {
+  try {
+    const request = await SignRequest.findOne({
+      _id: req.params.id,
+      sender: req.user.id,
+    });
+
+    if (!request) {
+      return res.status(404).json({
+        message: "Signing request not found or unauthorized",
+      });
+    }
+
+    await SignRequest.findByIdAndDelete(req.params.id);
+
+    res.status(200).json({
+      message: "Signing request deleted successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to delete signing request",
+      error: error.message,
+    });
+  }
+});
+
+
 // Get single signing request
 router.get("/:id", authMiddleware, async (req, res) => {
   try {

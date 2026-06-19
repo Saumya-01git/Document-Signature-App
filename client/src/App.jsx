@@ -216,6 +216,9 @@ const signedDocuments = documents.filter(
 const rejectedDocuments = documents.filter(
   (doc) => doc.status === "Rejected"
 ).length;
+const partiallySignedDocuments = documents.filter(
+  (doc) => doc.status === "Partially Signed"
+).length;
 
 
     const uploadDocument = async () => {
@@ -253,6 +256,13 @@ const rejectedDocuments = documents.filter(
 const createSigningRequest = async () => {
   if (!selectedDoc) {
     alert("Please open/select a document first");
+    return;
+  }
+
+  if (selectedDoc.status === "Signed") {
+    alert(
+      "This document is already signed. You cannot create a new signing request."
+    );
     return;
   }
 
@@ -305,6 +315,26 @@ const fetchSignRequests = async () => {
   } catch (error) {
     console.log("Fetch sign requests error:", error);
     alert("Failed to fetch signing requests");
+  }
+};
+
+const deleteSignRequest = async (id) => {
+  try {
+    await axios.delete(
+      `http://localhost:5000/api/sign-requests/${id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    alert("Signing request deleted");
+
+    fetchSignRequests();
+  } catch (error) {
+    console.log(error);
+    alert("Failed to delete signing request");
   }
 };
 
@@ -373,7 +403,12 @@ const fetchSignRequests = async () => {
 </button>
 
         <button
-  className="bg-purple-600 text-white px-4 py-2 rounded ml-3"
+  className={`px-4 py-2 rounded ml-3 text-white ${
+    selectedDoc?.status === "Signed"
+      ? "bg-gray-400 cursor-not-allowed"
+      : "bg-purple-600"
+  }`}
+  disabled={selectedDoc?.status === "Signed"}
   onClick={() => setPlacingSignature(true)}
 >
   Place Signature
@@ -409,7 +444,7 @@ const fetchSignRequests = async () => {
 </div>
 
 
-        <div className="grid gap-4 md:grid-cols-4 mb-6">
+        <div className="grid gap-4 md:grid-cols-5 mb-6">
   <div className="border rounded p-4 bg-white shadow-sm">
     <h3 className="font-semibold">Total Documents</h3>
     <p className="text-2xl font-bold">{totalDocuments}</p>
@@ -429,6 +464,11 @@ const fetchSignRequests = async () => {
     <h3 className="font-semibold">Rejected</h3>
     <p className="text-2xl font-bold">{rejectedDocuments}</p>
   </div>
+
+  <div className="border rounded p-4 bg-blue-50 shadow-sm">
+  <h3 className="font-semibold">Partially Signed</h3>
+  <p className="text-2xl font-bold">{partiallySignedDocuments}</p>
+</div>
 </div>
 
 
@@ -532,16 +572,26 @@ const fetchSignRequests = async () => {
         Link: {req.signingLink || `http://localhost:5173/sign/${req.signingToken}`}
       </p>
 
-      <button
-        className="mt-2 bg-gray-800 text-white px-3 py-1 rounded"
-        onClick={() =>
-  navigator.clipboard.writeText(
-    req.signingLink || `http://localhost:5173/sign/${req.signingToken}`
-  )
-}
-      >
-        Copy Link
-      </button>
+      <div className="mt-2 flex gap-2">
+  <button
+    className="bg-gray-800 text-white px-3 py-1 rounded"
+    onClick={() =>
+      navigator.clipboard.writeText(
+        req.signingLink ||
+          `http://localhost:5173/sign/${req.signingToken}`
+      )
+    }
+  >
+    Copy Link
+  </button>
+
+  <button
+    className="bg-red-600 text-white px-3 py-1 rounded"
+    onClick={() => deleteSignRequest(req._id)}
+  >
+    Delete
+  </button>
+</div>
     </div>
   ))}
 </div>
@@ -571,11 +621,16 @@ const fetchSignRequests = async () => {
     />
 
     <button
-      className="bg-orange-600 text-white px-4 py-2 rounded"
-      onClick={createSigningRequest}
-    >
-      Generate Signing Link
-    </button>
+  className={`px-4 py-2 rounded text-white ${
+    selectedDoc.status === "Signed"
+      ? "bg-gray-400 cursor-not-allowed"
+      : "bg-orange-600"
+  }`}
+  onClick={createSigningRequest}
+  disabled={selectedDoc.status === "Signed"}
+>
+  Generate Signing Link
+</button>
 
     {signingLink && (
       <button
