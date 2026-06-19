@@ -320,6 +320,47 @@ router.delete("/:id", authMiddleware, async (req, res) => {
 });
 
 
+// Get signing progress for a document
+router.get("/progress/:documentId", authMiddleware, async (req, res) => {
+  try {
+    const requests = await SignRequest.find({
+      documentId: req.params.documentId,
+    });
+
+    const total = requests.length;
+
+    const signed = requests.filter(
+      (r) => r.status === "Signed"
+    ).length;
+
+    const pending = requests.filter(
+      (r) => r.status === "Pending"
+    ).length;
+
+    const rejected = requests.filter(
+      (r) => r.status === "Rejected"
+    ).length;
+
+    const percentage =
+      total === 0
+        ? 0
+        : Math.round((signed / total) * 100);
+
+    res.status(200).json({
+      total,
+      signed,
+      pending,
+      rejected,
+      percentage,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch progress",
+      error: error.message,
+    });
+  }
+});
+
 // Get single signing request
 router.get("/:id", authMiddleware, async (req, res) => {
   try {

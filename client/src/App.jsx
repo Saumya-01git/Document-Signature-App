@@ -68,6 +68,7 @@ function App() {
   const [rotation, setRotation] = useState(0);
   const [signedPdfLink, setSignedPdfLink] = useState("");
   const [auditLogs, setAuditLogs] = useState([]);
+  const [progress, setProgress] = useState(null);
 
   const fetchDocuments = async () => {
   console.log("Fetch My Documents clicked");
@@ -105,6 +106,16 @@ function App() {
       );
 
       setSignatures(res.data.signatures);
+      const progressRes = await axios.get(
+  `http://localhost:5000/api/sign-requests/progress/${doc._id}`,
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
+
+setProgress(progressRes.data);
     } catch (error) {
       alert("Failed to fetch signatures");
       console.log(error);
@@ -407,6 +418,25 @@ const fetchAuditLogs = async () => {
   }
 };
 
+const fetchProgress = async () => {
+  if (!selectedDoc) return;
+
+  try {
+    const res = await axios.get(
+      `http://localhost:5000/api/sign-requests/progress/${selectedDoc._id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    setProgress(res.data);
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-slate-100 p-6">
@@ -671,6 +701,33 @@ const fetchAuditLogs = async () => {
             <h2 className="text-xl font-semibold mb-3">
               Preview: {selectedDoc.title}
             </h2>
+            {progress && (
+  <div className="mb-4 border rounded p-4 bg-blue-50">
+    <h3 className="font-semibold mb-3">
+      Signing Progress
+    </h3>
+
+    <div className="grid md:grid-cols-4 gap-3">
+      <div>Total: {progress.total}</div>
+      <div>Signed: {progress.signed}</div>
+      <div>Pending: {progress.pending}</div>
+      <div>Rejected: {progress.rejected}</div>
+    </div>
+
+    <div className="mt-3 w-full bg-gray-300 rounded h-4">
+      <div
+        className="bg-green-600 h-4 rounded"
+        style={{
+          width: `${progress.percentage}%`,
+        }}
+      />
+    </div>
+
+    <p className="mt-2 font-medium">
+      {progress.percentage}% Completed
+    </p>
+  </div>
+)}
             <button
   className="bg-emerald-600 text-white px-4 py-2 rounded mb-4"
   onClick={finalizeDocument}
