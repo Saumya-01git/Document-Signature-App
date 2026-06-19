@@ -461,10 +461,12 @@ const fetchSignRequests = async () => {
                     <span
                       className={`ml-2 px-2 py-1 rounded text-white ${
                         doc.status === "Signed"
-                          ? "bg-green-600"
-                          : doc.status === "Rejected"
-                          ? "bg-red-600"
-                          : "bg-yellow-500"
+  ? "bg-green-600"
+  : doc.status === "Rejected"
+  ? "bg-red-600"
+  : doc.status === "Partially Signed"
+  ? "bg-blue-600"
+  : "bg-yellow-500"
                       }`}
                     >
                       {doc.status}
