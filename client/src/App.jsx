@@ -684,6 +684,19 @@ const fetchProgress = async () => {
   Updated: {new Date(req.updatedAt).toLocaleString()}
 </p>
 
+<p>
+  Expires:{" "}
+  {req.expiresAt
+    ? new Date(req.expiresAt).toLocaleString()
+    : "No expiry"}
+</p>
+
+{req.expiresAt &&
+  new Date() > new Date(req.expiresAt) && (
+    <p className="text-red-600 font-semibold">
+      Expired
+    </p>
+)}
 
       {req.rejectionReason && (
         <p>Rejection Reason: {req.rejectionReason}</p>
@@ -706,7 +719,9 @@ const fetchProgress = async () => {
     Copy Link
   </button>
 
-  {req.status === "Pending" && (
+  {req.status === "Pending" &&
+ !(req.expiresAt &&
+   new Date() > new Date(req.expiresAt)) && (
   <button
     className="bg-blue-600 text-white px-3 py-1 rounded"
     onClick={() => resendSignRequest(req._id)}
