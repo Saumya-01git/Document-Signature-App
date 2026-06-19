@@ -444,6 +444,7 @@ const fetchSignRequests = async () => {
     <option value="Signed">Signed</option>
     <option value="Pending">Pending</option>
     <option value="Rejected">Rejected</option>
+    <option value="Partially Signed">Partially Signed</option>
   </select>
 </div>
 

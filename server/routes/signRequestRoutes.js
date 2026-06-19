@@ -117,8 +117,34 @@ if (status === "Rejected") {
 await request.save();
 
 
+const allRequests = await SignRequest.find({
+  documentId: request.documentId,
+});
+
+let documentStatus = "Pending";
+
+const hasRejected = allRequests.some(
+  (req) => req.status === "Rejected"
+);
+
+const allSigned = allRequests.every(
+  (req) => req.status === "Signed"
+);
+
+const someSigned = allRequests.some(
+  (req) => req.status === "Signed"
+);
+
+if (hasRejected) {
+  documentStatus = "Rejected";
+} else if (allSigned) {
+  documentStatus = "Signed";
+} else if (someSigned) {
+  documentStatus = "Partially Signed";
+}
+
 await Document.findByIdAndUpdate(request.documentId, {
-  status,
+  status: documentStatus,
 });
 
     await AuditLog.create({

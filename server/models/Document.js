@@ -34,10 +34,15 @@ const documentSchema = new mongoose.Schema(
     },
 
     status: {
-      type: String,
-      enum: ["Pending", "Signed", "Rejected"],
-      default: "Pending",
-    },
+  type: String,
+  enum: [
+    "Pending",
+    "Partially Signed",
+    "Signed",
+    "Rejected",
+  ],
+  default: "Pending",
+},
   },
   {
     timestamps: true,

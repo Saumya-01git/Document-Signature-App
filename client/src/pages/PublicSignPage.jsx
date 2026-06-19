@@ -21,6 +21,7 @@ function PublicSignPage() {
   const [rotation, setRotation] = useState(0);
   const [signaturePlaced, setSignaturePlaced] = useState(false);
   const [signaturePosition, setSignaturePosition] = useState(null);
+  const [existingSignatures, setExistingSignatures] = useState([]);
 
   const handlePdfClick = (e, pageNumber) => {
   if (request?.status !== "Pending") return;
@@ -111,6 +112,12 @@ const handleReject = async () => {
 
 
 setDocumentData(docRes.data.document);
+
+const sigRes = await axios.get(
+  `http://localhost:5000/api/sign-requests/public/${token}/signatures`
+);
+
+setExistingSignatures(sigRes.data.signatures);
       } catch (error) {
         console.log(error);
       }
@@ -234,6 +241,29 @@ setDocumentData(docRes.data.document);
   onClick={(e) => handlePdfClick(e, index + 1)}
 >
   <Page pageNumber={index + 1} width={700} />
+  {existingSignatures
+  .filter((sig) => sig.page === index + 1)
+  .map((sig) => (
+    <div
+      key={sig._id}
+      className="absolute border-2 border-blue-500 bg-blue-100 text-blue-700 px-3 py-2 rounded"
+      style={{
+        left: `${sig.x}px`,
+        top: `${sig.y}px`,
+        fontFamily:
+          sig.fontStyle === "Cursive"
+            ? "cursive"
+            : sig.fontStyle === "Serif"
+            ? "serif"
+            : sig.fontStyle === "Monospace"
+            ? "monospace"
+            : "Arial",
+        transform: `rotate(${sig.rotation || 0}deg)`,
+      }}
+    >
+      {sig.signatureText || "Signed"}
+    </div>
+  ))}
 
   {signaturePosition?.page === index + 1 && (
     <div
