@@ -67,6 +67,7 @@ function App() {
   const [fontStyle, setFontStyle] = useState("Arial");
   const [rotation, setRotation] = useState(0);
   const [signedPdfLink, setSignedPdfLink] = useState("");
+  const [auditLogs, setAuditLogs] = useState([]);
 
   const fetchDocuments = async () => {
   console.log("Fetch My Documents clicked");
@@ -368,6 +369,29 @@ const finalizeDocument = async () => {
   }
 };
 
+const fetchAuditLogs = async () => {
+  if (!selectedDoc) {
+    alert("Please open/select a document first");
+    return;
+  }
+
+  try {
+    const res = await axios.get(
+      `http://localhost:5000/api/audit/${selectedDoc._id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    setAuditLogs(res.data.logs);
+  } catch (error) {
+    console.log(error);
+    alert("Failed to fetch audit logs");
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-slate-100 p-6">
@@ -638,6 +662,35 @@ const finalizeDocument = async () => {
 >
   Finalize & Generate Signed PDF
 </button>
+
+<button
+  className="ml-3 bg-slate-700 text-white px-4 py-2 rounded mb-4"
+  onClick={fetchAuditLogs}
+>
+  View Audit Trail
+</button>
+
+{auditLogs.length > 0 && (
+  <div className="mb-4 border rounded p-4 bg-slate-50">
+    <h3 className="font-semibold mb-3">Audit Trail</h3>
+
+    <div className="space-y-3">
+      {auditLogs.map((log) => (
+        <div
+          key={log._id}
+          className="border rounded p-3 bg-white"
+        >
+          <p>Action: {log.action}</p>
+          <p>User: {log.userEmail}</p>
+          <p>IP Address: {log.ipAddress}</p>
+          <p>
+            Time: {new Date(log.createdAt).toLocaleString()}
+          </p>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
 
 {signedPdfLink && (
   <a
