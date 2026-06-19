@@ -361,6 +361,42 @@ router.get("/progress/:documentId", authMiddleware, async (req, res) => {
   }
 });
 
+// Resend signing request email
+router.post("/:id/resend", authMiddleware, async (req, res) => {
+  try {
+    const request = await SignRequest.findOne({
+      _id: req.params.id,
+      sender: req.user.id,
+    });
+
+    if (!request) {
+      return res.status(404).json({
+        message: "Signing request not found or unauthorized",
+      });
+    }
+
+    if (request.status !== "Pending") {
+      return res.status(400).json({
+        message: "Only pending signing requests can be resent",
+      });
+    }
+
+    await sendSigningEmail(
+      request.signerEmail,
+      request.signingLink
+    );
+
+    res.status(200).json({
+      message: "Signing request email resent successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to resend signing request",
+      error: error.message,
+    });
+  }
+});
+
 // Get single signing request
 router.get("/:id", authMiddleware, async (req, res) => {
   try {

@@ -366,6 +366,28 @@ const deleteSignRequest = async (id) => {
   }
 };
 
+const resendSignRequest = async (id) => {
+  try {
+    await axios.post(
+      `http://localhost:5000/api/sign-requests/${id}/resend`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    alert("Signing request email resent successfully");
+  } catch (error) {
+    console.log(error);
+    alert(
+      error.response?.data?.message ||
+        "Failed to resend signing request"
+    );
+  }
+};
+
 const finalizeDocument = async () => {
   if (!selectedDoc) {
     alert("Please open/select a document first");
@@ -683,6 +705,15 @@ const fetchProgress = async () => {
   >
     Copy Link
   </button>
+
+  {req.status === "Pending" && (
+  <button
+    className="bg-blue-600 text-white px-3 py-1 rounded"
+    onClick={() => resendSignRequest(req._id)}
+  >
+    Resend Email
+  </button>
+)}
 
   <button
     className="bg-red-600 text-white px-3 py-1 rounded"
