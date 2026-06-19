@@ -9,14 +9,21 @@ const sendSigningEmail = require("../utils/sendEmail");
 
 const router = express.Router();
 
-// Create signing request
+// Create signing request / multiple signing requests
 router.post("/", authMiddleware, async (req, res) => {
   try {
-    const { documentId, signerEmail } = req.body;
+    const { documentId, signerEmail, signerEmails } = req.body;
 
-    if (!documentId || !signerEmail) {
+    const emails =
+      signerEmails && signerEmails.length > 0
+        ? signerEmails
+        : signerEmail
+        ? [signerEmail]
+        : [];
+
+    if (!documentId || emails.length === 0) {
       return res.status(400).json({
-        message: "Document ID and signer email are required",
+        message: "Document ID and at least one signer email are required",
       });
     }
 
@@ -30,30 +37,36 @@ router.post("/", authMiddleware, async (req, res) => {
         message: "Document not found or unauthorized",
       });
     }
-    
-    const signingToken = crypto.randomBytes(32).toString("hex");
 
-const signingLink = `http://localhost:5173/sign/${signingToken}`;
+    const createdRequests = [];
 
+    for (const email of emails) {
+      const signingToken = crypto.randomBytes(32).toString("hex");
 
-    const signRequest = await SignRequest.create({
-  documentId,
-  sender: req.user.id,
-  signerEmail,
-  signingToken,
-  signingLink,
-});
+      const signingLink = `http://localhost:5173/sign/${signingToken}`;
 
-await sendSigningEmail(
-  signerEmail,
-  signingLink
-);
+      const signRequest = await SignRequest.create({
+        documentId,
+        sender: req.user.id,
+        signerEmail: email,
+        signingToken,
+        signingLink,
+      });
+
+      await sendSigningEmail(email, signingLink);
+
+      createdRequests.push(signRequest);
+    }
 
     res.status(201).json({
-      message: "Signing request created successfully",
-      signRequest,
+      message: "Signing requests created and emails sent successfully",
+      count: createdRequests.length,
+      signRequests: createdRequests,
+      signRequest: createdRequests[0],
     });
   } catch (error) {
+    console.log("CREATE SIGN REQUEST ERROR:", error);
+
     res.status(500).json({
       message: "Failed to create signing request",
       error: error.message,
