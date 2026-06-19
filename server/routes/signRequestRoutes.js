@@ -5,6 +5,7 @@ const authMiddleware = require("../middleware/authMiddleware");
 const crypto = require("crypto");
 const AuditLog = require("../models/AuditLog");
 const Signature = require("../models/Signature");
+const sendSigningEmail = require("../utils/sendEmail");
 
 const router = express.Router();
 
@@ -42,6 +43,11 @@ const signingLink = `http://localhost:5173/sign/${signingToken}`;
   signingToken,
   signingLink,
 });
+
+await sendSigningEmail(
+  signerEmail,
+  signingLink
+);
 
     res.status(201).json({
       message: "Signing request created successfully",

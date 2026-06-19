@@ -288,11 +288,17 @@ const createSigningRequest = async () => {
     );
 
     setSigningLink(res.data.signRequest.signingLink);
-    alert("Signing request created successfully");
-  } catch (error) {
-    console.log(error);
-    alert("Failed to create signing request");
-  }
+    alert(`Signing link sent successfully to ${signerEmail}`);
+ } catch (error) {
+  console.log("FULL ERROR:", error);
+  console.log("BACKEND RESPONSE:", error.response?.data);
+
+  alert(
+    error.response?.data?.message ||
+    error.message ||
+    "Failed to create signing request"
+  );
+}
 };
 
 const fetchSignRequests = async () => {
