@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
@@ -69,6 +69,12 @@ function App() {
   const [signedPdfLink, setSignedPdfLink] = useState("");
   const [auditLogs, setAuditLogs] = useState([]);
   const [progress, setProgress] = useState(null);
+  useEffect(() => {
+  if (token) {
+    fetchDocuments();
+    fetchSignRequests();
+  }
+}, [token]);
 
   const fetchDocuments = async () => {
   console.log("Fetch My Documents clicked");
@@ -232,6 +238,26 @@ const rejectedDocuments = documents.filter(
 const partiallySignedDocuments = documents.filter(
   (doc) => doc.status === "Partially Signed"
 ).length;
+const totalRequests = signRequests.length;
+
+const signedRequests = signRequests.filter(
+  (req) => req.status === "Signed"
+).length;
+
+const pendingRequests = signRequests.filter(
+  (req) => req.status === "Pending"
+).length;
+
+const rejectedRequests = signRequests.filter(
+  (req) => req.status === "Rejected"
+).length;
+
+const successRate =
+  totalRequests === 0
+    ? 0
+    : Math.round((signedRequests / totalRequests) * 100);
+
+
 
 
     const uploadDocument = async () => {
@@ -440,6 +466,44 @@ const fetchAuditLogs = async () => {
   }
 };
 
+const downloadAuditReport = async () => {
+  if (!selectedDoc) {
+    alert("Please open/select a document first");
+    return;
+  }
+
+  try {
+    const response = await axios.get(
+      `http://localhost:5000/api/audit/${selectedDoc._id}/report`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        responseType: "blob",
+      }
+    );
+
+    const url = window.URL.createObjectURL(
+      new Blob([response.data])
+    );
+
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.setAttribute(
+      "download",
+      `audit-report-${selectedDoc.title}.pdf`
+    );
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  } catch (error) {
+    console.log(error);
+    alert("Failed to download audit report");
+  }
+};
+
 const fetchProgress = async () => {
   if (!selectedDoc) return;
 
@@ -591,7 +655,32 @@ const fetchProgress = async () => {
   <p className="text-2xl font-bold">{partiallySignedDocuments}</p>
 </div>
 </div>
+<div className="grid gap-4 md:grid-cols-5 mb-6">
+  <div className="border rounded p-4 bg-indigo-50 shadow-sm">
+    <h3 className="font-semibold">Total Requests</h3>
+    <p className="text-2xl font-bold">{totalRequests}</p>
+  </div>
 
+  <div className="border rounded p-4 bg-green-50 shadow-sm">
+    <h3 className="font-semibold">Signed Requests</h3>
+    <p className="text-2xl font-bold">{signedRequests}</p>
+  </div>
+
+  <div className="border rounded p-4 bg-yellow-50 shadow-sm">
+    <h3 className="font-semibold">Pending Requests</h3>
+    <p className="text-2xl font-bold">{pendingRequests}</p>
+  </div>
+
+  <div className="border rounded p-4 bg-red-50 shadow-sm">
+    <h3 className="font-semibold">Rejected Requests</h3>
+    <p className="text-2xl font-bold">{rejectedRequests}</p>
+  </div>
+
+  <div className="border rounded p-4 bg-blue-50 shadow-sm">
+    <h3 className="font-semibold">Success Rate</h3>
+    <p className="text-2xl font-bold">{successRate}%</p>
+  </div>
+</div>
 
         <h2 className="text-xl font-semibold mb-3">Uploaded Documents</h2>
 
@@ -786,6 +875,13 @@ const fetchProgress = async () => {
   onClick={fetchAuditLogs}
 >
   View Audit Trail
+</button>
+
+<button
+  className="ml-3 bg-indigo-700 text-white px-4 py-2 rounded mb-4"
+  onClick={downloadAuditReport}
+>
+  Download Audit Report
 </button>
 
 {auditLogs.length > 0 && (
