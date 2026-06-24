@@ -22,9 +22,21 @@ function PublicSignPage() {
   const [signaturePlaced, setSignaturePlaced] = useState(false);
   const [signaturePosition, setSignaturePosition] = useState(null);
   const [existingSignatures, setExistingSignatures] = useState([]);
+  const inputClass =
+  "border border-slate-300 p-3 rounded-xl w-full focus:outline-none focus:ring-2 focus:ring-cyan-400 transition";
+
+const primaryBtn =
+  "bg-gradient-to-r from-[#3FB8AF] to-[#40C0CB] hover:from-[#40C0CB] hover:to-[#3FB8AF] active:scale-95 transition-all duration-200 text-white font-semibold px-5 py-3 rounded-2xl shadow-md hover:shadow-xl";
+
+const dangerBtn =
+  "bg-gradient-to-r from-[#FF3D7F] to-[#FF9E9D] hover:from-[#FF9E9D] hover:to-[#FF3D7F] active:scale-95 transition-all duration-200 text-white font-semibold px-5 py-3 rounded-2xl shadow-md hover:shadow-xl";
+
+const cardClass =
+  "rounded-3xl bg-white/90 backdrop-blur-xl shadow-xl p-6 border border-white/70 text-slate-800";
 
   const handlePdfClick = (e, pageNumber) => {
   if (request?.status !== "Pending") return;
+if (request?.role !== "Signer") return;
 
   if (!signatureText) {
     alert("Please enter your signature text first");
@@ -46,25 +58,39 @@ function PublicSignPage() {
 };
 
   const handleApprove = async () => {
-    if (!signaturePlaced) {
-  alert("Please place your signature on the document before approving");
-  return;
-}
+  if (request?.role === "Signer" && !signaturePlaced) {
+    alert("Please place your signature on the document before approving");
+    return;
+  }
+
   try {
+    const payload =
+      request?.role === "Signer"
+        ? {
+            status: "Signed",
+            signatureText,
+            fontStyle,
+            rotation,
+            x: signaturePosition.x,
+            y: signaturePosition.y,
+            page: signaturePosition.page,
+          }
+        : {
+            status: "Signed",
+          };
+
     await axios.put(
       `http://localhost:5000/api/sign-requests/public/${token}/status`,
-      {
-  status: "Signed",
-  signatureText,
-  fontStyle,
-  rotation,
-  x: signaturePosition.x,
-  y: signaturePosition.y,
-  page: signaturePosition.page,
-}
+      payload
     );
 
-    alert("Document signed successfully");
+    alert(
+      request?.role === "Witness"
+        ? "Document witnessed successfully"
+        : request?.role === "Approver"
+        ? "Document approved successfully"
+        : "Document signed successfully"
+    );
 
     const res = await axios.get(
       `http://localhost:5000/api/sign-requests/public/${token}`
@@ -72,8 +98,13 @@ function PublicSignPage() {
 
     setRequest(res.data.request);
   } catch (error) {
-    console.log(error);
-  }
+  console.log(error);
+
+  alert(
+    error.response?.data?.message ||
+      "Unable to complete this action"
+  );
+}
 };
 
 const handleReject = async () => {
@@ -94,8 +125,13 @@ const handleReject = async () => {
 
     setRequest(res.data.request);
   } catch (error) {
-    console.log(error);
-  }
+  console.log(error);
+
+  alert(
+    error.response?.data?.message ||
+      "Unable to reject this document"
+  );
+}
 };
 
   useEffect(() => {
@@ -127,32 +163,62 @@ setExistingSignatures(sigRes.data.signatures);
   }, [token]);
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold">
-        Sign Document
-      </h1>
+  <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#40C0CB_0%,transparent_30%),radial-gradient(circle_at_top_right,#FF3D7F_0%,transparent_25%),linear-gradient(135deg,#0f172a,#134e4a,#1e293b)] p-4 md:p-8">
+    <div className="max-w-7xl mx-auto rounded-[2rem] bg-slate-900/45 backdrop-blur-2xl shadow-2xl border border-white/20 p-5 md:p-8 text-white">
+      <h1 className="text-5xl font-extrabold tracking-tight">
+  🚀 <span className="text-[#FF6B9A]">Sign</span>
+  <span className="text-[#40C0CB]">Flow</span>
+</h1>
 
-      <p className="mt-3">
-        Token: {token}
-      </p>
+<p className="text-slate-200 mt-2 text-lg">
+  <p className="text-slate-200 mt-2 text-lg">
+  {request?.role === "Witness"
+    ? "Review and witness this document."
+    : request?.role === "Approver"
+    ? "Review and approve this document."
+    : "Review and sign your document securely."}
+</p>
+</p>
 
       {request && (
-        <div className="mt-4 border p-4 rounded">
+        <div className="mt-6 space-y-6">
           <p>
-            Signer Email: {request.signerEmail}
-          </p>
+  {request.role === "Witness"
+    ? "Witness Email:"
+    : request.role === "Approver"
+    ? "Approver Email:"
+    : "Signer Email:"}
+  {" "}
+  {request.signerEmail}
+</p>
 
           <p>
             Status: {request.status}
           </p>
+          <p>
+  Role:{" "}
+  <span
+    className={`px-2 py-1 rounded text-white ${
+      request.role === "Signer"
+        ? "bg-cyan-600"
+        : request.role === "Witness"
+        ? "bg-purple-600"
+        : "bg-pink-600"
+    }`}
+  >
+    {request.role || "Signer"}
+  </span>
+</p>
 
-          {request.status === "Pending" && (
-  <div className="mt-4 border p-4 rounded bg-slate-50">
-    <h3 className="font-semibold mb-3">Add Your Signature</h3>
+          {request.status === "Pending" && request.role === "Signer" && (
+  <div className={cardClass}>
+    <h3 className="text-lg font-bold mb-3">
+  ✍️ Add Your Signature
+</h3>
 
     <div className="grid gap-3 md:grid-cols-3">
       <input
-        className="border p-2 rounded"
+        className={inputClass}
         type="text"
         placeholder="Type your signature"
         value={signatureText}
@@ -160,7 +226,7 @@ setExistingSignatures(sigRes.data.signatures);
       />
 
       <select
-        className="border p-2 rounded"
+        className={inputClass}
         value={fontStyle}
         onChange={(e) => setFontStyle(e.target.value)}
       >
@@ -171,9 +237,9 @@ setExistingSignatures(sigRes.data.signatures);
       </select>
 
       <input
-        className="border p-2 rounded"
+        className={inputClass}
         type="number"
-        placeholder="Rotation"
+        placeholder="Rotation (0°)"
         value={rotation}
         onChange={(e) => setRotation(Number(e.target.value))}
       />
@@ -188,9 +254,13 @@ setExistingSignatures(sigRes.data.signatures);
           {request.status === "Pending" && (
   <button
     onClick={handleApprove}
-    className="mt-3 bg-green-600 text-white px-4 py-2 rounded"
+    className={primaryBtn}
   >
-    Approve & Sign
+    {request.role === "Witness"
+  ? "👀 Confirm as Witness"
+  : request.role === "Approver"
+  ? "✅ Approve Document"
+  : "✍️ Approve & Sign"}
   </button>
 )}
 
@@ -203,12 +273,12 @@ setExistingSignatures(sigRes.data.signatures);
       onChange={(e) =>
         setRejectionReason(e.target.value)
       }
-      className="border p-2 rounded ml-3"
+      className={`${inputClass} max-w-xs`}
     />
 
     <button
       onClick={handleReject}
-      className="ml-3 bg-red-600 text-white px-4 py-2 rounded"
+      className={dangerBtn}
     >
       Reject
     </button>
@@ -217,7 +287,7 @@ setExistingSignatures(sigRes.data.signatures);
 
 
           {documentData && (
-  <div className="mt-4 border p-4 rounded">
+  <div className={cardClass}>
     <h2 className="font-bold text-lg">
       Document Details
     </h2>
@@ -229,7 +299,7 @@ setExistingSignatures(sigRes.data.signatures);
 )}
 
 {documentData && (
-  <div className="mt-6 border rounded bg-gray-200 p-4 overflow-auto max-h-[800px]">
+  <div className="mt-6 rounded-3xl bg-white/90 border border-white/70 shadow-xl p-4 overflow-auto max-h-[800px]">
     <Document
       file={`http://localhost:5000/${documentData.filePath}`}
       onLoadSuccess={({ numPages }) => setNumPages(numPages)}
@@ -293,8 +363,8 @@ setExistingSignatures(sigRes.data.signatures);
 
         </div>
       )}
+          </div>
     </div>
   );
 }
-
 export default PublicSignPage;

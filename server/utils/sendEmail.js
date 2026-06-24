@@ -10,12 +10,25 @@ const transporter = nodemailer.createTransport({
 
 const sendSigningEmail = async (
   recipientEmail,
-  signingLink
+  signingLink,
+  role = "Signer"
 ) => {
+  let actionText = "signature";
+let roleTitle = "Document Signature Request";
+
+if (role === "Witness") {
+  actionText = "witness confirmation";
+  roleTitle = "Document Witness Request";
+}
+
+if (role === "Approver") {
+  actionText = "approval";
+  roleTitle = "Document Approval Request";
+}
   await transporter.sendMail({
     from: process.env.EMAIL_USER,
     to: recipientEmail,
-    subject: "SignFlow Document Signature Request",
+    subject: `SignFlow - ${roleTitle}`,
     html: `
   <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
 
@@ -32,11 +45,11 @@ const sendSigningEmail = async (
     </p>
 
     <p>
-      You have received a document that requires your signature.
+      You have received a document that requires your ${actionText}.
     </p>
 
     <p>
-      Please click the button below to review and sign the document.
+      Please click the button below to review the document and complete your required action.
     </p>
 
     <a
@@ -51,7 +64,11 @@ const sendSigningEmail = async (
         font-weight:bold;
       "
     >
-      Open Document
+      ${role === "Signer"
+  ? "Review & Sign"
+  : role === "Witness"
+  ? "Review & Witness"
+  : "Review & Approve"}
     </a>
 
     <p style="margin-top:20px;">

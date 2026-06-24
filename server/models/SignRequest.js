@@ -19,6 +19,22 @@ const signRequestSchema = new mongoose.Schema(
       required: true,
     },
 
+    role: {
+  type: String,
+  enum: ["Signer", "Witness", "Approver"],
+  default: "Signer",
+},
+
+roleOrder: {
+  type: Number,
+  default: 1,
+},
+
+emailSent: {
+  type: Boolean,
+  default: false,
+},
+
     signingToken: {
   type: String,
   required: true,
@@ -46,5 +62,6 @@ expiresAt: {
     timestamps: true,
   }
 );
+
 
 module.exports = mongoose.model("SignRequest", signRequestSchema);

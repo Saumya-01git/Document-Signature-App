@@ -2,6 +2,9 @@ const express = require("express");
 const Document = require("../models/Document");
 const upload = require("../middleware/uploadMiddleware");
 const authMiddleware = require("../middleware/authMiddleware");
+const SignRequest = require("../models/SignRequest");
+const Signature = require("../models/Signature");
+const AuditLog = require("../models/AuditLog");
 
 const router = express.Router();
 
@@ -76,6 +79,38 @@ router.get("/:id", authMiddleware, async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to fetch document",
+      error: error.message,
+    });
+  }
+});
+
+// Delete document
+router.delete("/:id", authMiddleware, async (req, res) => {
+  try {
+    const document = await Document.findOne({
+      _id: req.params.id,
+      owner: req.user.id,
+    });
+
+    if (!document) {
+      return res.status(404).json({
+        message: "Document not found or unauthorized",
+      });
+    }
+
+
+await SignRequest.deleteMany({ documentId: req.params.id });
+await Signature.deleteMany({ documentId: req.params.id });
+await AuditLog.deleteMany({ documentId: req.params.id });
+
+await Document.findByIdAndDelete(req.params.id);
+
+    res.status(200).json({
+      message: "Document deleted successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to delete document",
       error: error.message,
     });
   }

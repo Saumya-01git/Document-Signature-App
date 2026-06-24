@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
@@ -61,14 +61,44 @@ function App() {
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadFile, setUploadFile] = useState(null);
   const [signerEmail, setSignerEmail] = useState("");
+const [witnessEmail, setWitnessEmail] = useState("");
+const [approverEmail, setApproverEmail] = useState("");
   const [signingLink, setSigningLink] = useState("");
   const [signRequests, setSignRequests] = useState([]);
+  const [documentRequests, setDocumentRequests] = useState([]);
   const [signatureText, setSignatureText] = useState("");
   const [fontStyle, setFontStyle] = useState("Arial");
   const [rotation, setRotation] = useState(0);
   const [signedPdfLink, setSignedPdfLink] = useState("");
   const [auditLogs, setAuditLogs] = useState([]);
   const [progress, setProgress] = useState(null);
+  const [activeView, setActiveView] = useState("dashboard");
+  const [searchTerm, setSearchTerm] = useState("");
+  const documentsRef = useRef(null);
+const requestsRef = useRef(null);
+const uploadRef = useRef(null);
+const documentRequestsRef = useRef(null);
+const workspaceRef = useRef(null);
+
+
+  const cardClass =
+  "rounded-3xl bg-white/90 backdrop-blur-xl shadow-xl p-6 border border-white/70 hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 text-slate-800";
+const inputClass =
+  "border border-slate-300 p-3 rounded-xl w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 transition";
+
+const primaryBtn =
+  "bg-gradient-to-r from-[#3FB8AF] to-[#40C0CB] hover:from-[#40C0CB] hover:to-[#3FB8AF] active:scale-95 transition-all duration-200 text-white font-semibold px-5 py-3 rounded-2xl shadow-md hover:shadow-xl";
+
+const successBtn =
+  "bg-gradient-to-r from-[#7FC7AF] to-[#3FB8AF] hover:from-[#3FB8AF] hover:to-[#7FC7AF] active:scale-95 transition-all duration-200 text-white font-semibold px-5 py-3 rounded-2xl shadow-md hover:shadow-xl";
+
+const dangerBtn =
+  "bg-gradient-to-r from-[#FF3D7F] to-[#FF9E9D] hover:from-[#FF9E9D] hover:to-[#FF3D7F] active:scale-95 transition-all duration-200 text-white font-semibold px-5 py-3 rounded-2xl shadow-md hover:shadow-xl";
+
+const darkBtn =
+  "bg-gradient-to-r from-[#6366F1] to-[#8B5CF6] hover:from-[#8B5CF6] hover:to-[#6366F1] active:scale-95 transition-all duration-200 text-white font-semibold px-5 py-3 rounded-2xl shadow-md hover:shadow-xl";
+const actionBtn =
+  "bg-gradient-to-r from-[#3FB8AF] to-[#40C0CB] hover:from-[#40C0CB] hover:to-[#3FB8AF] active:scale-95 transition-all duration-200 text-white font-semibold px-5 py-3 rounded-2xl shadow-md hover:shadow-xl";
   useEffect(() => {
   if (token) {
     fetchDocuments();
@@ -102,7 +132,17 @@ function App() {
   const openDocument = async (doc) => {
     try {
       setSelectedDoc(doc);
-      setNumPages(null);
+setActiveView("workspace");
+setTimeout(() => {
+  workspaceRef.current?.scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+  });
+}, 100);
+setNumPages(null);
+setAuditLogs([]);
+setSignedPdfLink("");
+setSigningLink("");
 
       const res = await axios.get(
         `http://localhost:5000/api/signatures/${doc._id}`,
@@ -122,6 +162,16 @@ function App() {
 );
 
 setProgress(progressRes.data);
+const docReqRes = await axios.get(
+  `http://localhost:5000/api/sign-requests/document/${doc._id}`,
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
+
+setDocumentRequests(docReqRes.data.requests);
     } catch (error) {
       alert("Failed to fetch signatures");
       console.log(error);
@@ -220,10 +270,16 @@ const handleDragEnd = async (event) => {
   }
 };
 
-const filteredDocuments =
-  statusFilter === "All"
-    ? documents
-    : documents.filter((doc) => doc.status === statusFilter);
+const filteredDocuments = documents.filter((doc) => {
+  const matchesStatus =
+    statusFilter === "All" || doc.status === statusFilter;
+
+  const matchesSearch =
+    doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    doc.fileName.toLowerCase().includes(searchTerm.toLowerCase());
+
+  return matchesStatus && matchesSearch;
+});
 
 const totalDocuments = documents.length;
 const pendingDocuments = documents.filter(
@@ -238,27 +294,6 @@ const rejectedDocuments = documents.filter(
 const partiallySignedDocuments = documents.filter(
   (doc) => doc.status === "Partially Signed"
 ).length;
-const totalRequests = signRequests.length;
-
-const signedRequests = signRequests.filter(
-  (req) => req.status === "Signed"
-).length;
-
-const pendingRequests = signRequests.filter(
-  (req) => req.status === "Pending"
-).length;
-
-const rejectedRequests = signRequests.filter(
-  (req) => req.status === "Rejected"
-).length;
-
-const successRate =
-  totalRequests === 0
-    ? 0
-    : Math.round((signedRequests / totalRequests) * 100);
-
-
-
 
     const uploadDocument = async () => {
   if (!uploadTitle || !uploadFile) {
@@ -299,9 +334,7 @@ const createSigningRequest = async () => {
   }
 
   if (selectedDoc.status === "Signed") {
-    alert(
-      "This document is already signed. You cannot create a new signing request."
-    );
+    alert("This document is already signed.");
     return;
   }
 
@@ -314,12 +347,11 @@ const createSigningRequest = async () => {
     const res = await axios.post(
       "http://localhost:5000/api/sign-requests",
       {
-  documentId: selectedDoc._id,
-  signerEmails: signerEmail
-    .split(",")
-    .map((email) => email.trim())
-    .filter((email) => email !== ""),
-},
+        documentId: selectedDoc._id,
+        signerEmail,
+        witnessEmail,
+        approverEmail,
+      },
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -328,23 +360,30 @@ const createSigningRequest = async () => {
     );
 
     setSigningLink(res.data.signRequest.signingLink);
-    if (res.data.count === 1) {
-  alert("Signing link sent successfully to the signer email");
-} else {
-  alert(
-    `Signing links sent successfully to ${res.data.count} signers`
-  );
-}
- } catch (error) {
-  console.log("FULL ERROR:", error);
-  console.log("BACKEND RESPONSE:", error.response?.data);
 
-  alert(
-    error.response?.data?.message ||
-    error.message ||
-    "Failed to create signing request"
-  );
-}
+    alert("Workflow created. Email sent to signer first.");
+
+    setSignerEmail("");
+    setWitnessEmail("");
+    setApproverEmail("");
+
+    const docReqRes = await axios.get(
+      `http://localhost:5000/api/sign-requests/document/${selectedDoc._id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    setDocumentRequests(docReqRes.data.requests);
+  } catch (error) {
+    console.log(error);
+    alert(
+      error.response?.data?.message ||
+        "Failed to create workflow"
+    );
+  }
 };
 
 const fetchSignRequests = async () => {
@@ -385,10 +424,53 @@ const deleteSignRequest = async (id) => {
 
     alert("Signing request deleted");
 
-    fetchSignRequests();
+    if (selectedDoc) {
+  const docReqRes = await axios.get(
+    `http://localhost:5000/api/sign-requests/document/${selectedDoc._id}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  setDocumentRequests(docReqRes.data.requests);
+}
   } catch (error) {
     console.log(error);
     alert("Failed to delete signing request");
+  }
+};
+
+const deleteDocument = async (id) => {
+  const confirmDelete = window.confirm(
+    "Delete this document?"
+  );
+
+  if (!confirmDelete) return;
+
+  try {
+    await axios.delete(
+      `http://localhost:5000/api/docs/${id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    alert("Document deleted successfully");
+
+await fetchDocuments();
+await fetchSignRequests();
+
+if (selectedDoc?._id === id) {
+      setSelectedDoc(null);
+setActiveView("dashboard");
+    }
+  } catch (error) {
+    console.log(error);
+    alert("Failed to delete document");
   }
 };
 
@@ -451,15 +533,21 @@ const fetchAuditLogs = async () => {
 
   try {
     const res = await axios.get(
-      `http://localhost:5000/api/audit/${selectedDoc._id}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+  `http://localhost:5000/api/audit/${selectedDoc._id}`,
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
 
-    setAuditLogs(res.data.logs);
+if (res.data.logs.length === 0) {
+  alert("No audit records found for this document.");
+  setAuditLogs([]);
+  return;
+}
+
+setAuditLogs(res.data.logs);
   } catch (error) {
     console.log(error);
     alert("Failed to fetch audit logs");
@@ -525,18 +613,57 @@ const fetchProgress = async () => {
 
 
   return (
-    <div className="min-h-screen bg-slate-100 p-6">
-      <div className="max-w-6xl mx-auto bg-white p-6 rounded-xl shadow">
-        <h1 className="text-3xl font-bold mb-4">SignFlow Dashboard</h1>
-        <button
-  className="bg-red-600 text-white px-4 py-2 rounded mb-4"
-  onClick={() => {
-    localStorage.removeItem("token");
-    window.location.href = "/login";
-  }}
->
-  Logout
-</button>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#40C0CB_0%,transparent_30%),radial-gradient(circle_at_top_right,#FF3D7F_0%,transparent_25%),linear-gradient(135deg,#0f172a,#134e4a,#1e293b)] p-4 md:p-8">
+      <div className="w-full max-w-7xl mx-auto rounded-[2rem] bg-slate-900/45 backdrop-blur-2xl shadow-2xl border border-white/20 p-5 md:p-8 text-white">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-8">
+  <div>
+    <h1 className="text-4xl md:text-6xl font-extrabold bg-gradient-to-r from-[#FF3D7F] via-[#40C0CB] to-[#3FB8AF] bg-clip-text text-transparent leading-tight">
+  🚀 SignFlow
+</h1>
+    <p className="text-slate-200 mt-2 text-lg">
+      Smart document signing, audit tracking and PDF management.
+    </p>
+  </div>
+
+  <button
+    className={`${dangerBtn} h-fit`}
+    onClick={() => {
+      localStorage.removeItem("token");
+      window.location.href = "/login";
+    }}
+  >
+    Logout
+  </button>
+</div>
+
+<div className="flex flex-wrap gap-3 mb-6">
+  <button
+    className={`${primaryBtn} min-w-[180px]`}
+    onClick={() =>
+      uploadRef.current?.scrollIntoView({ behavior: "smooth" })
+    }
+  >
+    Upload New
+  </button>
+
+  <button
+    className={`${successBtn} min-w-[180px]`}
+    onClick={() =>
+      documentsRef.current?.scrollIntoView({ behavior: "smooth" })
+    }
+  >
+    View Documents
+  </button>
+
+  {/* <button
+    className={darkBtn}
+    onClick={() =>
+      requestsRef.current?.scrollIntoView({ behavior: "smooth" })
+    }
+  >
+    Signing Requests
+  </button> */}
+</div>
 
 
 {/* JWT input removed after login system 
@@ -549,9 +676,9 @@ const fetchProgress = async () => {
 /> 
 */}
 
-<div className="mb-4 grid gap-3 md:grid-cols-3">
+<div ref={uploadRef} className="mb-4 grid gap-3 md:grid-cols-3">
   <input
-    className="border p-2 rounded"
+    className={inputClass}
     type="text"
     placeholder="Document title"
     value={uploadTitle}
@@ -559,136 +686,69 @@ const fetchProgress = async () => {
   />
 
   <input
-    className="border p-2 rounded"
+    className={inputClass}
     type="file"
     accept="application/pdf"
     onChange={(e) => setUploadFile(e.target.files[0])}
   />
 
   <button
-    className="bg-indigo-600 text-white px-4 py-2 rounded"
+    className={actionBtn}
     onClick={uploadDocument}
   >
     Upload PDF
   </button>
 </div>
 
-<button
-  className="bg-blue-600 text-white px-4 py-2 rounded mb-6"
-  onClick={fetchDocuments}
->
-  Fetch My Documents
-</button>
-
-<button
-  className="bg-slate-700 text-white px-4 py-2 rounded mb-6 ml-3"
-  onClick={fetchSignRequests}
->
-  Fetch Signing Requests
-</button>
-
-        <button
-  className={`px-4 py-2 rounded ml-3 text-white ${
-    selectedDoc?.status === "Signed"
-      ? "bg-gray-400 cursor-not-allowed"
-      : "bg-purple-600"
-  }`}
-  disabled={selectedDoc?.status === "Signed"}
-  onClick={() => setPlacingSignature(true)}
->
-  Place Signature
-</button>
-
-<div className="mb-6 grid gap-3 md:grid-cols-3">
-  <input
-    className="border p-2 rounded"
-    type="text"
-    placeholder="Signature text"
-    value={signatureText}
-    onChange={(e) => setSignatureText(e.target.value)}
-  />
-
-  <select
-    className="border p-2 rounded"
-    value={fontStyle}
-    onChange={(e) => setFontStyle(e.target.value)}
-  >
-    <option value="Arial">Arial</option>
-    <option value="Cursive">Cursive</option>
-    <option value="Serif">Serif</option>
-    <option value="Monospace">Monospace</option>
-  </select>
-
-  <input
-    className="border p-2 rounded"
-    type="number"
-    placeholder="Rotation"
-    value={rotation}
-    onChange={(e) => setRotation(Number(e.target.value))}
-  />
-</div>
 
 
         <div className="grid gap-4 md:grid-cols-5 mb-6">
-  <div className="border rounded p-4 bg-white shadow-sm">
+  <div className={cardClass}>
     <h3 className="font-semibold">Total Documents</h3>
     <p className="text-2xl font-bold">{totalDocuments}</p>
   </div>
 
-  <div className="border rounded p-4 bg-yellow-50 shadow-sm">
+  <div className={cardClass}>
     <h3 className="font-semibold">Pending</h3>
     <p className="text-2xl font-bold">{pendingDocuments}</p>
   </div>
 
-  <div className="border rounded p-4 bg-green-50 shadow-sm">
+  <div className={cardClass}>
     <h3 className="font-semibold">Signed</h3>
     <p className="text-2xl font-bold">{signedDocuments}</p>
   </div>
 
-  <div className="border rounded p-4 bg-red-50 shadow-sm">
+  <div className={cardClass}>
     <h3 className="font-semibold">Rejected</h3>
     <p className="text-2xl font-bold">{rejectedDocuments}</p>
   </div>
 
-  <div className="border rounded p-4 bg-blue-50 shadow-sm">
+  <div className={cardClass}>
   <h3 className="font-semibold">Partially Signed</h3>
   <p className="text-2xl font-bold">{partiallySignedDocuments}</p>
 </div>
 </div>
-<div className="grid gap-4 md:grid-cols-5 mb-6">
-  <div className="border rounded p-4 bg-indigo-50 shadow-sm">
-    <h3 className="font-semibold">Total Requests</h3>
-    <p className="text-2xl font-bold">{totalRequests}</p>
-  </div>
 
-  <div className="border rounded p-4 bg-green-50 shadow-sm">
-    <h3 className="font-semibold">Signed Requests</h3>
-    <p className="text-2xl font-bold">{signedRequests}</p>
-  </div>
 
-  <div className="border rounded p-4 bg-yellow-50 shadow-sm">
-    <h3 className="font-semibold">Pending Requests</h3>
-    <p className="text-2xl font-bold">{pendingRequests}</p>
-  </div>
+        {activeView === "dashboard" && (
+  <>
+        <h2 ref={documentsRef} className="text-xl font-semibold mb-3">
+  Uploaded Documents ({filteredDocuments.length})
+</h2>
 
-  <div className="border rounded p-4 bg-red-50 shadow-sm">
-    <h3 className="font-semibold">Rejected Requests</h3>
-    <p className="text-2xl font-bold">{rejectedRequests}</p>
-  </div>
-
-  <div className="border rounded p-4 bg-blue-50 shadow-sm">
-    <h3 className="font-semibold">Success Rate</h3>
-    <p className="text-2xl font-bold">{successRate}%</p>
-  </div>
-</div>
-
-        <h2 className="text-xl font-semibold mb-3">Uploaded Documents</h2>
+<input
+  className={`${inputClass} mb-4`}
+  type="text"
+  placeholder="Search documents by title or file name..."
+  value={searchTerm}
+  onChange={(e) => setSearchTerm(e.target.value)}
+/>
 
         <div className="mb-4">
   <select
     value={statusFilter}
     onChange={(e) => setStatusFilter(e.target.value)}
-    className="border p-2 rounded"
+    className="border border-white/60 bg-white text-slate-800 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-400"
   >
     <option value="All">All Documents</option>
     <option value="Signed">Signed</option>
@@ -698,11 +758,17 @@ const fetchProgress = async () => {
   </select>
 </div>
 
+{filteredDocuments.length === 0 && (
+  <div className={cardClass}>
+    No documents match your search. Upload a PDF to get started.
+  </div>
+)}
+
         <div className="grid gap-3 mb-6">
           {filteredDocuments.map((doc) => (
             <div
               key={doc._id}
-              className="border rounded p-4 flex justify-between items-center"
+              className="border border-white/60 rounded-3xl p-5 flex flex-col md:flex-row md:justify-between md:items-center gap-4 bg-white/90 backdrop-blur-xl shadow-lg hover:shadow-2xl transition-all duration-300 text-slate-800"
             >
               <div>
                 <h3 className="font-semibold">{doc.title}</h3>
@@ -725,29 +791,58 @@ const fetchProgress = async () => {
                 <p className="text-sm text-gray-500">File: {doc.fileName}</p>
               </div>
 
+              <p className="text-sm text-gray-500">
+  Uploaded:{" "}
+  {new Date(doc.createdAt).toLocaleDateString()}
+</p>
+
               <button
-                className="bg-green-600 text-white px-3 py-2 rounded"
+                className={actionBtn}
                 onClick={() => openDocument(doc)}
               >
-                Open with Signature Placeholder
+                Open Document
               </button>
+              
+              <button
+  className={darkBtn}
+  onClick={async () => {
+    await openDocument(doc);
+
+    setTimeout(() => {
+      documentRequestsRef.current?.scrollIntoView({
+        behavior: "smooth",
+      });
+    }, 500);
+  }}
+>
+  Signing Requests
+</button>
+<button
+  className={dangerBtn}
+  onClick={() => deleteDocument(doc._id)}
+>
+  Delete
+</button>
             </div>
           ))}
         </div>
         
 
-        {signRequests.length > 0 && (
-  <h2 className="text-xl font-semibold mb-3">
-    Signing Requests
-  </h2>
-)}
+        {/* <h2 ref={requestsRef} className="text-xl font-semibold mb-3">
+  Signing Requests
+</h2>
         
+{signRequests.length === 0 && (
+  <div className={cardClass}>
+    No signing requests found yet.
+  </div>
+)}
 
 <div className="grid gap-3 mb-6">
   {signRequests.map((req) => (
     <div
       key={req._id}
-      className="border rounded p-4"
+      className="border border-slate-200 rounded-2xl p-4 bg-white/80 hover:shadow-lg transition-all duration-300"
     >
       <p>Signer Email: {req.signerEmail}</p>
       <p>
@@ -797,7 +892,7 @@ const fetchProgress = async () => {
 
       <div className="mt-2 flex gap-2">
   <button
-    className="bg-gray-800 text-white px-3 py-1 rounded"
+    className={darkBtn}
     onClick={() =>
       navigator.clipboard.writeText(
         req.signingLink ||
@@ -812,7 +907,7 @@ const fetchProgress = async () => {
  !(req.expiresAt &&
    new Date() > new Date(req.expiresAt)) && (
   <button
-    className="bg-blue-600 text-white px-3 py-1 rounded"
+    className={primaryBtn}
     onClick={() => resendSignRequest(req._id)}
   >
     Resend Email
@@ -820,7 +915,7 @@ const fetchProgress = async () => {
 )}
 
   <button
-    className="bg-red-600 text-white px-3 py-1 rounded"
+    className={dangerBtn}
     onClick={() => deleteSignRequest(req._id)}
   >
     Delete
@@ -828,23 +923,86 @@ const fetchProgress = async () => {
 </div>
     </div>
   ))}
-</div>
+</div> */}
 
-
-        {selectedDoc && (
-          <div>
+          </>
+)}
+        {activeView === "workspace" && selectedDoc && (
+  <div ref={workspaceRef}>
+    <button
+      className={`${darkBtn} mb-4`}
+      onClick={() => setActiveView("dashboard")}
+    >
+      ← Back to Dashboard
+    </button>
             <h2 className="text-xl font-semibold mb-3">
               Preview: {selectedDoc.title}
             </h2>
+
+            <div className="mb-6 rounded-3xl bg-white/85 border border-white/70 shadow-xl p-6 text-slate-800">
+  <h3 className="text-lg font-bold mb-2">
+    Add Signature
+  </h3>
+
+  <p className="text-sm text-gray-600 mb-4">
+    Type the signature text, click “Place Signature”, then click anywhere on the PDF where you want the signature to appear.
+  </p>
+
+  <div className="grid gap-3 md:grid-cols-3 mb-4">
+    <input
+      className={inputClass}
+      type="text"
+      placeholder="Enter signature name"
+      value={signatureText}
+      onChange={(e) => setSignatureText(e.target.value)}
+    />
+
+    <select
+      className={inputClass}
+      value={fontStyle}
+      onChange={(e) => setFontStyle(e.target.value)}
+    >
+      <option value="Arial">Simple</option>
+      <option value="Cursive">Cursive Signature</option>
+      <option value="Serif">Formal</option>
+      <option value="Monospace">Typed Style</option>
+    </select>
+
+    <input
+      className={inputClass}
+      type="number"
+      placeholder="Rotation (0°)"
+      value={rotation}
+      onChange={(e) => setRotation(Number(e.target.value))}
+    />
+  </div>
+
+  <p className="text-xs text-gray-500 mb-4">
+    Tilt angle means rotation in degrees. Use 0 for straight, 10 for slight right tilt, and -10 for slight left tilt.
+  </p>
+
+  <button
+    className={`font-semibold px-5 py-3 rounded-2xl text-white shadow-md hover:shadow-xl active:scale-95 transition-all duration-200 ${
+      selectedDoc?.status === "Signed"
+        ? "bg-gray-400 cursor-not-allowed"
+        : "bg-gradient-to-r from-purple-600 to-[#FF3D7F] hover:from-[#FF3D7F] hover:to-purple-600"
+    }`}
+    disabled={selectedDoc?.status === "Signed"}
+    onClick={() => setPlacingSignature(true)}
+  >
+    ✍️ Place Signature on PDF
+  </button>
+</div>
+
             {progress && (
-  <div className="mb-4 border rounded p-4 bg-blue-50">
+  <div className="mb-6 rounded-3xl bg-white/85 border border-white/70 shadow-xl p-6 text-slate-800">
     <h3 className="font-semibold mb-3">
       Signing Progress
     </h3>
 
     <div className="grid md:grid-cols-4 gap-3">
       <div>Total: {progress.total}</div>
-      <div>Signed: {progress.signed}</div>
+      <div>Completed: {progress.signed}</div>
       <div>Pending: {progress.pending}</div>
       <div>Rejected: {progress.rejected}</div>
     </div>
@@ -864,21 +1022,21 @@ const fetchProgress = async () => {
   </div>
 )}
             <button
-  className="bg-emerald-600 text-white px-4 py-2 rounded mb-4"
+  className={`${successBtn} mb-4`}
   onClick={finalizeDocument}
 >
   Finalize & Generate Signed PDF
 </button>
 
 <button
-  className="ml-3 bg-slate-700 text-white px-4 py-2 rounded mb-4"
+  className={`${darkBtn} ml-3 mb-4`}
   onClick={fetchAuditLogs}
 >
   View Audit Trail
 </button>
 
 <button
-  className="ml-3 bg-indigo-700 text-white px-4 py-2 rounded mb-4"
+  className={`${actionBtn} ml-3 mb-4`}
   onClick={downloadAuditReport}
 >
   Download Audit Report
@@ -886,7 +1044,16 @@ const fetchProgress = async () => {
 
 {auditLogs.length > 0 && (
   <div className="mb-4 border rounded p-4 bg-slate-50">
-    <h3 className="font-semibold mb-3">Audit Trail</h3>
+    <div className="flex justify-between items-center mb-3">
+      <h3 className="font-semibold">Audit Trail</h3>
+
+      <button
+        className={dangerBtn}
+        onClick={() => setAuditLogs([])}
+      >
+        Close
+      </button>
+    </div>
 
     <div className="space-y-3">
       {auditLogs.map((log) => (
@@ -921,53 +1088,55 @@ const fetchProgress = async () => {
               </div>
             )}
             
-            <div className="mb-4 border p-4 rounded bg-slate-50">
-  <h3 className="font-semibold mb-2">Create Signing Request</h3>
+            <div className="mb-6 rounded-3xl bg-white/90 border border-white/70 shadow-xl p-6 text-slate-800">
+  <h3 className="font-semibold mb-2">
+    Create Sequential Workflow
+  </h3>
+
+  <p className="text-sm text-gray-500 mb-4">
+    Email will be sent to all signers first. After all signers complete, witness gets email. After witness completes, approver gets email.
+  </p>
 
   <div className="grid gap-3 md:grid-cols-3">
-    <div className="flex flex-col">
-  <input
-    className="border p-2 rounded"
-    type="text"
-    placeholder="Signer email(s)"
-    value={signerEmail}
-    onChange={(e) => setSignerEmail(e.target.value)}
-  />
+    <input
+      className={inputClass}
+      type="email"
+      placeholder="Signer email(s) separated by commas *"
+      value={signerEmail}
+      onChange={(e) => setSignerEmail(e.target.value)}
+    />
 
-  <p className="text-xs text-gray-500 mt-1">
-    Multiple signers: separate emails with commas
-  </p>
-</div>
+    <input
+      className={inputClass}
+      type="email"
+      placeholder="Witness email optional"
+      value={witnessEmail}
+      onChange={(e) => setWitnessEmail(e.target.value)}
+    />
 
-    <button
-  className={`px-4 py-2 rounded text-white ${
-    selectedDoc.status === "Signed"
-      ? "bg-gray-400 cursor-not-allowed"
-      : "bg-orange-600"
-  }`}
-  onClick={createSigningRequest}
-  disabled={selectedDoc.status === "Signed"}
->
-  Generate Signing Link
-</button>
-
-    {signingLink && (
-      <button
-        className="bg-gray-800 text-white px-4 py-2 rounded"
-        onClick={() => navigator.clipboard.writeText(signingLink)}
-      >
-        Copy Link
-      </button>
-    )}
+    <input
+      className={inputClass}
+      type="email"
+      placeholder="Approver email optional"
+      value={approverEmail}
+      onChange={(e) => setApproverEmail(e.target.value)}
+    />
   </div>
+
+  <button
+    className={`${actionBtn} mt-4`}
+    onClick={createSigningRequest}
+    disabled={selectedDoc.status === "Signed"}
+  >
+    Create Workflow
+  </button>
 
   {signingLink && (
     <p className="mt-3 text-sm break-all">
-      Signing Link: {signingLink}
+      First Signing Link: {signingLink}
     </p>
   )}
-</div>  
-
+</div>
 
             <div className="border rounded bg-gray-200 p-4 overflow-auto max-h-[800px]">
               <DndContext onDragEnd={handleDragEnd}>
@@ -993,10 +1162,86 @@ const fetchProgress = async () => {
               </Document>
               </DndContext>
             </div>
+            <div ref={documentRequestsRef}>
+  <h3 className="font-semibold mb-3 mt-4">
+    Signing Requests For This Document
+  </h3>
+
+{documentRequests.length === 0 && (
+  <div className={cardClass}>
+    No signing requests for this document.
+  </div>
+)}
+
+<div className="grid gap-3 mb-6">
+  {documentRequests.map((req) => (
+    <div
+      key={req._id}
+      className="rounded-3xl bg-white/90 border border-white/70 shadow-xl p-6 text-slate-800"
+    >
+      <p>
+  <strong>Signer:</strong> {req.signerEmail}
+</p>
+<p>
+  <strong>Role:</strong>{" "}
+  <span
+    className={`px-2 py-1 rounded text-white ${
+      req.role === "Signer"
+        ? "bg-cyan-600"
+        : req.role === "Witness"
+        ? "bg-purple-600"
+        : "bg-pink-600"
+    }`}
+  >
+    {req.role || "Signer"}
+  </span>
+</p>
+<p>
+  <strong>Status:</strong>
+
+  <span
+    className={`ml-2 px-2 py-1 rounded text-white ${
+      req.status === "Signed"
+        ? "bg-green-600"
+        : req.status === "Rejected"
+        ? "bg-red-600"
+        : "bg-yellow-500"
+    }`}
+  >
+    {req.status}
+  </span>
+</p>
+<p className="text-sm text-gray-500 mt-2">
+  Created:
+  {new Date(req.createdAt).toLocaleString()}
+</p>
+      <div className="mt-2 flex gap-2">
+        {req.status === "Pending" && (
+  <button
+    className={primaryBtn}
+    onClick={() => resendSignRequest(req._id)}
+  >
+    Resend Email
+  </button>
+)}
+
+        <button
+          className={dangerBtn}
+          onClick={() => deleteSignRequest(req._id)}
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  ))}
+</div>
+</div>
           </div>
         )}
       </div>
     </div>
+    
+    
   );
 }
 

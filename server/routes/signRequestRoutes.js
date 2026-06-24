@@ -9,21 +9,24 @@ const sendSigningEmail = require("../utils/sendEmail");
 
 const router = express.Router();
 
-// Create signing request / multiple signing requests
+// Create sequential signing workflow
 router.post("/", authMiddleware, async (req, res) => {
   try {
-    const { documentId, signerEmail, signerEmails } = req.body;
+    const {
+      documentId,
+      signerEmail,
+      witnessEmail,
+      approverEmail,
+    } = req.body;
 
-    const emails =
-      signerEmails && signerEmails.length > 0
-        ? signerEmails
-        : signerEmail
-        ? [signerEmail]
-        : [];
+    const signerEmails = signerEmail
+  .split(",")
+  .map((email) => email.trim())
+  .filter((email) => email !== "");
 
-    if (!documentId || emails.length === 0) {
+    if (!documentId || signerEmails.length === 0) {
       return res.status(400).json({
-        message: "Document ID and at least one signer email are required",
+        message: "Document ID and signer email are required",
       });
     }
 
@@ -38,45 +41,79 @@ router.post("/", authMiddleware, async (req, res) => {
       });
     }
 
+    const workflowRecipients = signerEmails.map((email) => ({
+  email,
+  role: "Signer",
+  roleOrder: 1,
+  emailSent: true,
+}));
+
+    if (witnessEmail) {
+      workflowRecipients.push({
+        email: witnessEmail,
+        role: "Witness",
+        roleOrder: 2,
+        emailSent: false,
+      });
+    }
+
+    if (approverEmail) {
+      workflowRecipients.push({
+        email: approverEmail,
+        role: "Approver",
+        roleOrder: witnessEmail ? 3 : 2,
+        emailSent: false,
+      });
+    }
+
     const createdRequests = [];
 
-    for (const email of emails) {
+    for (const recipient of workflowRecipients) {
       const signingToken = crypto.randomBytes(32).toString("hex");
-
       const signingLink = `http://localhost:5173/sign/${signingToken}`;
+
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
 
       const signRequest = await SignRequest.create({
         documentId,
         sender: req.user.id,
-        signerEmail: email,
+        signerEmail: recipient.email,
+        role: recipient.role,
+        roleOrder: recipient.roleOrder,
+        emailSent: recipient.emailSent,
         signingToken,
         signingLink,
         expiresAt,
       });
 
-      await sendSigningEmail(email, signingLink);
-
       createdRequests.push(signRequest);
+
+      if (recipient.emailSent) {
+        await sendSigningEmail(
+  recipient.email,
+  signingLink,
+  recipient.role
+);
+      }
     }
 
     res.status(201).json({
-      message: "Signing requests created and emails sent successfully",
+      message:
+        "Workflow created successfully. Email sent to signer first.",
       count: createdRequests.length,
       signRequests: createdRequests,
       signRequest: createdRequests[0],
     });
   } catch (error) {
-    console.log("CREATE SIGN REQUEST ERROR:", error);
+    console.log("CREATE WORKFLOW ERROR:", error);
 
     res.status(500).json({
-      message: "Failed to create signing request",
+      message: "Failed to create workflow",
       error: error.message,
     });
   }
 });
-
 
 // Update signing request status
 router.put("/public/:token/status", async (req, res) => {
@@ -113,9 +150,38 @@ router.put("/public/:token/status", async (req, res) => {
   });
 }
 
+const allRequestsForDocument = await SignRequest.find({
+  documentId: request.documentId,
+});
+
+const hasRejected = allRequestsForDocument.some(
+  (req) => req.status === "Rejected"
+);
+
+if (hasRejected) {
+  return res.status(400).json({
+    message: "This document has already been rejected. No further action is allowed.",
+  });
+}
+
+const previousRequests = allRequestsForDocument.filter(
+  (req) => req.roleOrder < request.roleOrder
+);
+
+const pendingPrevious = previousRequests.find(
+  (req) => req.status !== "Signed"
+);
+
+if (pendingPrevious) {
+  return res.status(403).json({
+    message: `Waiting for ${pendingPrevious.role} to complete first.`,
+  });
+}
+
+
 request.status = status;
 
-if (status === "Signed") {
+if (status === "Signed" && request.role === "Signer") {
   if (!signatureText || x === undefined || y === undefined) {
     return res.status(400).json({
       message: "Signature text and position are required before signing",
@@ -143,6 +209,26 @@ if (status === "Rejected") {
 
 await request.save();
 
+if (status === "Signed") {
+  const nextRequest = await SignRequest.findOne({
+    documentId: request.documentId,
+    status: "Pending",
+    roleOrder: { $gt: request.roleOrder },
+    emailSent: false,
+  }).sort({ roleOrder: 1 });
+
+  if (nextRequest) {
+    await sendSigningEmail(
+  nextRequest.signerEmail,
+  nextRequest.signingLink,
+  nextRequest.role
+);
+
+    nextRequest.emailSent = true;
+    await nextRequest.save();
+  }
+}
+
 
 const allRequests = await SignRequest.find({
   documentId: request.documentId,
@@ -150,7 +236,7 @@ const allRequests = await SignRequest.find({
 
 let documentStatus = "Pending";
 
-const hasRejected = allRequests.some(
+const documentHasRejected = allRequests.some(
   (req) => req.status === "Rejected"
 );
 
@@ -162,9 +248,9 @@ const someSigned = allRequests.some(
   (req) => req.status === "Signed"
 );
 
-if (hasRejected) {
+if (documentHasRejected) {
   documentStatus = "Rejected";
-} else if (allSigned) {
+}else if (allSigned) {
   documentStatus = "Signed";
 } else if (someSigned) {
   documentStatus = "Partially Signed";
@@ -420,6 +506,33 @@ router.post("/:id/resend", authMiddleware, async (req, res) => {
   }
 });
 
+// Get signing requests for a specific document
+router.get(
+  "/document/:documentId",
+  authMiddleware,
+  async (req, res) => {
+    try {
+      const requests = await SignRequest.find({
+        documentId: req.params.documentId,
+        sender: req.user.id,
+      });
+
+      res.status(200).json({
+        message:
+          "Document signing requests fetched successfully",
+        count: requests.length,
+        requests,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message:
+          "Failed to fetch document signing requests",
+        error: error.message,
+      });
+    }
+  }
+);
+
 // Get single signing request
 router.get("/:id", authMiddleware, async (req, res) => {
   try {
@@ -443,5 +556,34 @@ router.get("/:id", authMiddleware, async (req, res) => {
   }
 });
 
+// Cleanup orphan signing requests
+router.delete("/cleanup/orphans", authMiddleware, async (req, res) => {
+  try {
+    const requests = await SignRequest.find({
+      sender: req.user.id,
+    });
+
+    let deletedCount = 0;
+
+    for (const request of requests) {
+      const document = await Document.findById(request.documentId);
+
+      if (!document) {
+        await SignRequest.findByIdAndDelete(request._id);
+        deletedCount++;
+      }
+    }
+
+    res.status(200).json({
+      message: "Orphan signing requests cleaned",
+      deletedCount,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Cleanup failed",
+      error: error.message,
+    });
+  }
+});
 
 module.exports = router;
