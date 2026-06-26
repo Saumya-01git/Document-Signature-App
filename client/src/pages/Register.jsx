@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import API_URL from "../api";
 
 function Register() {
   const [name, setName] = useState("");
@@ -31,7 +32,7 @@ function Register() {
     }
 
     try {
-      await axios.post("http://localhost:5000/api/auth/register", {
+      await axios.post(`${API_URL}/api/auth/register`, {
         name,
         email,
         password,

@@ -4,6 +4,8 @@ import axios from "axios";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
+import API_URL from "../api";
+
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
   import.meta.url
@@ -80,7 +82,7 @@ if (request?.role !== "Signer") return;
           };
 
     await axios.put(
-      `http://localhost:5000/api/sign-requests/public/${token}/status`,
+      `${API_URL}/api/sign-requests/public/${token}/status`,
       payload
     );
 
@@ -93,7 +95,7 @@ if (request?.role !== "Signer") return;
     );
 
     const res = await axios.get(
-      `http://localhost:5000/api/sign-requests/public/${token}`
+      `${API_URL}/api/sign-requests/public/${token}`
     );
 
     setRequest(res.data.request);
@@ -110,7 +112,7 @@ if (request?.role !== "Signer") return;
 const handleReject = async () => {
   try {
     await axios.put(
-      `http://localhost:5000/api/sign-requests/public/${token}/status`,
+      `${API_URL}/api/sign-requests/public/${token}/status`,
       {
         status: "Rejected",
         rejectionReason,
@@ -120,7 +122,7 @@ const handleReject = async () => {
     alert("Document rejected");
 
     const res = await axios.get(
-      `http://localhost:5000/api/sign-requests/public/${token}`
+      `${API_URL}/api/sign-requests/public/${token}`
     );
 
     setRequest(res.data.request);
@@ -138,19 +140,19 @@ const handleReject = async () => {
     const validateToken = async () => {
       try {
         const res = await axios.get(
-          `http://localhost:5000/api/sign-requests/public/${token}`
+          `${API_URL}/api/sign-requests/public/${token}`
         );
 
         setRequest(res.data.request);
         const docRes = await axios.get(
-  `http://localhost:5000/api/sign-requests/public/${token}/document`
+  `${API_URL}/api/sign-requests/public/${token}/document`
 );
 
 
 setDocumentData(docRes.data.document);
 
 const sigRes = await axios.get(
-  `http://localhost:5000/api/sign-requests/public/${token}/signatures`
+  `${API_URL}/api/sign-requests/public/${token}/signatures`
 );
 
 setExistingSignatures(sigRes.data.signatures);
@@ -301,7 +303,7 @@ setExistingSignatures(sigRes.data.signatures);
 {documentData && (
   <div className="mt-6 rounded-3xl bg-white/90 border border-white/70 shadow-xl p-4 overflow-auto max-h-[800px]">
     <Document
-      file={`http://localhost:5000/${documentData.filePath}`}
+      file={`${API_URL}/${documentData.filePath}`}
       onLoadSuccess={({ numPages }) => setNumPages(numPages)}
     >
       {Array.from(new Array(numPages), (_, index) => (

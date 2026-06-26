@@ -4,6 +4,7 @@ import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import { DndContext, useDraggable } from "@dnd-kit/core";
+import API_URL from "./api";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -117,7 +118,7 @@ const actionBtn =
   }
 
   try {
-    const res = await axios.get("http://localhost:5000/api/docs", {
+    const res = await axios.get(`${API_URL}/api/docs`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -145,7 +146,7 @@ setSignedPdfLink("");
 setSigningLink("");
 
       const res = await axios.get(
-        `http://localhost:5000/api/signatures/${doc._id}`,
+        `${API_URL}/api/signatures/${doc._id}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -153,7 +154,7 @@ setSigningLink("");
 
       setSignatures(res.data.signatures);
       const progressRes = await axios.get(
-  `http://localhost:5000/api/sign-requests/progress/${doc._id}`,
+  `${API_URL}/api/sign-requests/progress/${doc._id}`,
   {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -163,7 +164,7 @@ setSigningLink("");
 
 setProgress(progressRes.data);
 const docReqRes = await axios.get(
-  `http://localhost:5000/api/sign-requests/document/${doc._id}`,
+  `${API_URL}/api/sign-requests/document/${doc._id}`,
   {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -188,7 +189,7 @@ setDocumentRequests(docReqRes.data.requests);
 
   try {
     await axios.post(
-      "http://localhost:5000/api/signatures",
+  `${API_URL}/api/signatures`,
       {
         documentId: selectedDoc._id,
         x,
@@ -209,7 +210,7 @@ setDocumentRequests(docReqRes.data.requests);
     setPlacingSignature(false);
 
 const res = await axios.get(
-  `http://localhost:5000/api/signatures/${selectedDoc._id}`,
+  `${API_URL}/api/signatures/${selectedDoc._id}`,
   {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -249,7 +250,7 @@ const handleDragEnd = async (event) => {
 
   try {
     await axios.put(
-      `http://localhost:5000/api/signatures/${active.id}`,
+      `${API_URL}/api/signatures/${active.id}`,
       {
   x: updatedX,
   y: updatedY,
@@ -307,7 +308,7 @@ const partiallySignedDocuments = documents.filter(
 
   try {
     await axios.post(
-      "http://localhost:5000/api/docs/upload",
+      `${API_URL}/api/docs/upload`,
       formData,
       {
         headers: {
@@ -345,7 +346,7 @@ const createSigningRequest = async () => {
 
   try {
     const res = await axios.post(
-      "http://localhost:5000/api/sign-requests",
+      `${API_URL}/api/sign-requests`,
       {
         documentId: selectedDoc._id,
         signerEmail,
@@ -368,7 +369,7 @@ const createSigningRequest = async () => {
     setApproverEmail("");
 
     const docReqRes = await axios.get(
-      `http://localhost:5000/api/sign-requests/document/${selectedDoc._id}`,
+      `${API_URL}/api/sign-requests/document/${selectedDoc._id}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -397,7 +398,7 @@ const fetchSignRequests = async () => {
   }
 
   try {
-    const res = await axios.get("http://localhost:5000/api/sign-requests", {
+    const res = await axios.get(`${API_URL}/api/sign-requests`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -414,7 +415,7 @@ const fetchSignRequests = async () => {
 const deleteSignRequest = async (id) => {
   try {
     await axios.delete(
-      `http://localhost:5000/api/sign-requests/${id}`,
+      `${API_URL}/api/sign-requests/${id}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -426,7 +427,7 @@ const deleteSignRequest = async (id) => {
 
     if (selectedDoc) {
   const docReqRes = await axios.get(
-    `http://localhost:5000/api/sign-requests/document/${selectedDoc._id}`,
+    `${API_URL}/api/sign-requests/document/${selectedDoc._id}`,
     {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -451,7 +452,7 @@ const deleteDocument = async (id) => {
 
   try {
     await axios.delete(
-      `http://localhost:5000/api/docs/${id}`,
+      `${API_URL}/api/docs/${id}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -477,7 +478,7 @@ setActiveView("dashboard");
 const resendSignRequest = async (id) => {
   try {
     await axios.post(
-      `http://localhost:5000/api/sign-requests/${id}/resend`,
+      `${API_URL}/api/sign-requests/${id}/resend`,
       {},
       {
         headers: {
@@ -504,7 +505,7 @@ const finalizeDocument = async () => {
 
   try {
     const res = await axios.post(
-      "http://localhost:5000/api/signatures/finalize",
+      `${API_URL}/api/signatures/finalize`,
       {
         documentId: selectedDoc._id,
       },
@@ -515,7 +516,7 @@ const finalizeDocument = async () => {
       }
     );
 
-    const link = `http://localhost:5000/${res.data.signedPdf}`;
+    const link = `${API_URL}/${res.data.signedPdf}`;
     setSignedPdfLink(link);
 
     alert("Final signed PDF generated");
@@ -533,7 +534,7 @@ const fetchAuditLogs = async () => {
 
   try {
     const res = await axios.get(
-  `http://localhost:5000/api/audit/${selectedDoc._id}`,
+  `${API_URL}/api/audit/${selectedDoc._id}`,
   {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -562,7 +563,7 @@ const downloadAuditReport = async () => {
 
   try {
     const response = await axios.get(
-      `http://localhost:5000/api/audit/${selectedDoc._id}/report`,
+      `${API_URL}/api/audit/${selectedDoc._id}/report`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -597,7 +598,7 @@ const fetchProgress = async () => {
 
   try {
     const res = await axios.get(
-      `http://localhost:5000/api/sign-requests/progress/${selectedDoc._id}`,
+      `${API_URL}/api/sign-requests/progress/${selectedDoc._id}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -1141,7 +1142,7 @@ const fetchProgress = async () => {
             <div className="border rounded bg-gray-200 p-4 overflow-auto max-h-[800px]">
               <DndContext onDragEnd={handleDragEnd}>
               <Document
-                file={`http://localhost:5000/${selectedDoc.filePath}`}
+                file={`${API_URL}/${selectedDoc.filePath}`}
                 onLoadSuccess={({ numPages }) => setNumPages(numPages)}
               >
                 {Array.from(new Array(numPages), (_, index) => (
