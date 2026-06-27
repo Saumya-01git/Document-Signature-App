@@ -11,11 +11,23 @@ const path = require("path");
 const signatureRoutes = require("./routes/signatureRoutes");
 const signRequestRoutes = require("./routes/signRequestRoutes");
 const auditRoutes = require("./routes/auditRoutes");
+const fs = require("fs");
 
 dotenv.config();
 connectDB();
 
 const app = express();
+
+const uploadDir = path.join(__dirname, "uploads");
+const signedDir = path.join(__dirname, "uploads", "signed");
+
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+if (!fs.existsSync(signedDir)) {
+  fs.mkdirSync(signedDir, { recursive: true });
+}
 
 app.use(
   cors({
