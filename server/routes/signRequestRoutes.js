@@ -70,7 +70,7 @@ router.post("/", authMiddleware, async (req, res) => {
 
     for (const recipient of workflowRecipients) {
       const signingToken = crypto.randomBytes(32).toString("hex");
-      const signingLink = `http://localhost:5173/sign/${signingToken}`;
+      const signingLink = `${process.env.CLIENT_URL}/sign/${signingToken}`;
 
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
