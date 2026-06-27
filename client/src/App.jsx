@@ -100,6 +100,12 @@ const darkBtn =
   "bg-gradient-to-r from-[#6366F1] to-[#8B5CF6] hover:from-[#8B5CF6] hover:to-[#6366F1] active:scale-95 transition-all duration-200 text-white font-semibold px-5 py-3 rounded-2xl shadow-md hover:shadow-xl";
 const actionBtn =
   "bg-gradient-to-r from-[#3FB8AF] to-[#40C0CB] hover:from-[#40C0CB] hover:to-[#3FB8AF] active:scale-95 transition-all duration-200 text-white font-semibold px-5 py-3 rounded-2xl shadow-md hover:shadow-xl";
+
+  if (!token) {
+  window.location.href = "/login";
+  return null;
+}
+
   useEffect(() => {
   if (token) {
     fetchDocuments();
