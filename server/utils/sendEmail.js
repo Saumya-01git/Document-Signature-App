@@ -1,8 +1,20 @@
-const { Resend } = require("resend");
+const nodemailer = require("nodemailer");
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const transporter = nodemailer.createTransport({
+  host: "smtp-relay.brevo.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.BREVO_SMTP_USER,
+    pass: process.env.BREVO_SMTP_KEY,
+  },
+});
 
-const sendSigningEmail = async (recipientEmail, signingLink, role = "Signer") => {
+const sendSigningEmail = async (
+  recipientEmail,
+  signingLink,
+  role = "Signer"
+) => {
   let actionText = "signature";
   let roleTitle = "Document Signature Request";
 
@@ -16,18 +28,34 @@ const sendSigningEmail = async (recipientEmail, signingLink, role = "Signer") =>
     roleTitle = "Document Approval Request";
   }
 
-  await resend.emails.send({
-    from: "SignFlow <onboarding@resend.dev>",
+  await transporter.sendMail({
+    from: `"SignFlow" <${process.env.EMAIL_USER}>`,
     to: recipientEmail,
     subject: `SignFlow - ${roleTitle}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
         <h1 style="color:#4f46e5;">SignFlow</h1>
+
         <h2>${roleTitle}</h2>
+
         <p>Hello,</p>
+
         <p>You have received a document that requires your ${actionText}.</p>
-        <p>Please click below to review the document.</p>
-        <a href="${signingLink}" style="display:inline-block;padding:12px 20px;background:#4f46e5;color:white;text-decoration:none;border-radius:6px;font-weight:bold;">
+
+        <p>Please click the button below to review the document.</p>
+
+        <a
+          href="${signingLink}"
+          style="
+            display:inline-block;
+            padding:12px 20px;
+            background:#4f46e5;
+            color:white;
+            text-decoration:none;
+            border-radius:6px;
+            font-weight:bold;
+          "
+        >
           ${
             role === "Signer"
               ? "Review & Sign"
@@ -36,7 +64,16 @@ const sendSigningEmail = async (recipientEmail, signingLink, role = "Signer") =>
               : "Review & Approve"
           }
         </a>
-        <p>This signing link will expire in 7 days.</p>
+
+        <p style="margin-top:20px;">
+          This signing link will expire in 7 days.
+        </p>
+
+        <hr>
+
+        <p style="color:gray;font-size:12px;">
+          Powered by SignFlow
+        </p>
       </div>
     `,
   });
