@@ -210,22 +210,38 @@ if (status === "Rejected") {
 await request.save();
 
 if (status === "Signed") {
-  const nextRequest = await SignRequest.findOne({
+  const sameRolePending = await SignRequest.findOne({
     documentId: request.documentId,
+    roleOrder: request.roleOrder,
     status: "Pending",
-    roleOrder: { $gt: request.roleOrder },
-    emailSent: false,
-  }).sort({ roleOrder: 1 });
+  });
 
-  if (nextRequest) {
-    await sendSigningEmail(
-  nextRequest.signerEmail,
-  nextRequest.signingLink,
-  nextRequest.role
-);
+  if (!sameRolePending) {
+    const nextRequests = await SignRequest.find({
+      documentId: request.documentId,
+      status: "Pending",
+      roleOrder: { $gt: request.roleOrder },
+      emailSent: false,
+    }).sort({ roleOrder: 1 });
 
-    nextRequest.emailSent = true;
-    await nextRequest.save();
+    if (nextRequests.length > 0) {
+      const nextRoleOrder = nextRequests[0].roleOrder;
+
+      const nextRoleRequests = nextRequests.filter(
+        (req) => req.roleOrder === nextRoleOrder
+      );
+
+      for (const nextRequest of nextRoleRequests) {
+        await sendSigningEmail(
+          nextRequest.signerEmail,
+          nextRequest.signingLink,
+          nextRequest.role
+        );
+
+        nextRequest.emailSent = true;
+        await nextRequest.save();
+      }
+    }
   }
 }
 
