@@ -34,6 +34,7 @@ app.use(
     origin: [
       "http://localhost:5173",
       "https://document-signature-app-murex.vercel.app",
+      "https://document-signature-7xquoveol-saumya-s-projects5.vercel.app",
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
