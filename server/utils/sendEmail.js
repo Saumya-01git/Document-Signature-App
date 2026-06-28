@@ -1,17 +1,15 @@
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
+  service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  family: 4,
-  connectionTimeout: 30000,
-  greetingTimeout: 30000,
-  socketTimeout: 30000,
+  pool: false,
+  connectionTimeout: 60000,
+  greetingTimeout: 60000,
+  socketTimeout: 60000,
 });
 
 const sendSigningEmail = async (
@@ -32,7 +30,7 @@ if (role === "Approver") {
   roleTitle = "Document Approval Request";
 }
   await transporter.sendMail({
-    from: process.env.EMAIL_USER,
+    from: `"SignFlow" <${process.env.EMAIL_USER}>`,
     to: recipientEmail,
     subject: `SignFlow - ${roleTitle}`,
     html: `
