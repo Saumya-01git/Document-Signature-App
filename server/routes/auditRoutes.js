@@ -82,7 +82,9 @@ router.get("/:docId/report", authMiddleware, async (req, res) => {
       y -= 15;
 
       page.drawText(
-        `Time: ${new Date(log.createdAt).toLocaleString()}`,
+        `Time: ${new Date(log.createdAt).toLocaleString("en-IN", {
+  timeZone: "Asia/Kolkata",
+})}`,
         {
           x: 70,
           y,
