@@ -1050,9 +1050,9 @@ const fetchProgress = async () => {
 </button>
 
 {auditLogs.length > 0 && (
-  <div className="mb-4 border rounded p-4 bg-slate-50">
+  <div className="mb-4 border rounded p-4 bg-slate-50 text-slate-900">
     <div className="flex justify-between items-center mb-3">
-      <h3 className="font-semibold">Audit Trail</h3>
+      <h3 className="font-semibold text-slate-900">Audit Trail</h3>
 
       <button
         className={dangerBtn}
@@ -1066,7 +1066,7 @@ const fetchProgress = async () => {
       {auditLogs.map((log) => (
         <div
           key={log._id}
-          className="border rounded p-3 bg-white"
+          className="border rounded p-3 bg-white text-slate-800"
         >
           <p>Action: {log.action}</p>
           <p>User: {log.userEmail}</p>
