@@ -1,20 +1,4 @@
-const nodemailer = require("nodemailer");
-
-const transporter = nodemailer.createTransport({
-  host: "smtp-relay.brevo.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.BREVO_SMTP_USER,
-    pass: process.env.BREVO_SMTP_KEY,
-  },
-});
-
-const sendSigningEmail = async (
-  recipientEmail,
-  signingLink,
-  role = "Signer"
-) => {
+const sendSigningEmail = async (recipientEmail, signingLink, role = "Signer") => {
   let actionText = "signature";
   let roleTitle = "Document Signature Request";
 
@@ -28,55 +12,39 @@ const sendSigningEmail = async (
     roleTitle = "Document Approval Request";
   }
 
-  await transporter.sendMail({
-    from: `"SignFlow" <${process.env.EMAIL_USER}>`,
-    to: recipientEmail,
-    subject: `SignFlow - ${roleTitle}`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
-        <h1 style="color:#4f46e5;">SignFlow</h1>
-
+  const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      "api-key": process.env.BREVO_API_KEY,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      sender: {
+        name: "SignFlow",
+        email: process.env.EMAIL_USER,
+      },
+      to: [{ email: recipientEmail }],
+      subject: `SignFlow - ${roleTitle}`,
+      htmlContent: `
+        <h1>SignFlow</h1>
         <h2>${roleTitle}</h2>
-
         <p>Hello,</p>
-
         <p>You have received a document that requires your ${actionText}.</p>
-
-        <p>Please click the button below to review the document.</p>
-
-        <a
-          href="${signingLink}"
-          style="
-            display:inline-block;
-            padding:12px 20px;
-            background:#4f46e5;
-            color:white;
-            text-decoration:none;
-            border-radius:6px;
-            font-weight:bold;
-          "
-        >
-          ${
-            role === "Signer"
-              ? "Review & Sign"
-              : role === "Witness"
-              ? "Review & Witness"
-              : "Review & Approve"
-          }
-        </a>
-
-        <p style="margin-top:20px;">
-          This signing link will expire in 7 days.
-        </p>
-
-        <hr>
-
-        <p style="color:gray;font-size:12px;">
-          Powered by SignFlow
-        </p>
-      </div>
-    `,
+        <a href="${signingLink}">Review Document</a>
+        <p>This signing link will expire in 7 days.</p>
+      `,
+    }),
   });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    console.error("BREVO EMAIL ERROR:", data);
+    throw new Error(data.message || "Brevo email failed");
+  }
+
+  return data;
 };
 
 module.exports = sendSigningEmail;
