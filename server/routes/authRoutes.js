@@ -5,13 +5,48 @@ const User = require("../models/User");
 
 const router = express.Router();
 
+const emailRegex =
+  /^[a-zA-Z0-9](?!.*\.\.)[a-zA-Z0-9._%+-]*[a-zA-Z0-9]@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+const validatePassword = (password) => {
+  return (
+    password.length >= 8 &&
+    /[A-Z]/.test(password) &&
+    /[a-z]/.test(password) &&
+    /[0-9]/.test(password)
+  );
+};
+
 // Register user
 router.post("/register", async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const name = req.body.name?.trim();
+    const email = req.body.email?.trim().toLowerCase();
+    const password = req.body.password;
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: "Please fill all fields" });
+    if (!name) {
+      return res.status(400).json({ message: "Name is required" });
+    }
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        message: "Please enter a valid email address",
+      });
+    }
+
+    if (!password) {
+      return res.status(400).json({ message: "Password is required" });
+    }
+
+    if (!validatePassword(password)) {
+      return res.status(400).json({
+        message:
+          "Password must be at least 8 characters and include uppercase, lowercase, and number",
+      });
     }
 
     const existingUser = await User.findOne({ email });
@@ -37,17 +72,31 @@ router.post("/register", async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({
+      message: "Server error",
+      error: error.message,
+    });
   }
 });
 
 // Login user
 router.post("/login", async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const email = req.body.email?.trim().toLowerCase();
+    const password = req.body.password;
 
-    if (!email || !password) {
-      return res.status(400).json({ message: "Please fill all fields" });
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        message: "Please enter a valid email address",
+      });
+    }
+
+    if (!password) {
+      return res.status(400).json({ message: "Password is required" });
     }
 
     const user = await User.findOne({ email });
@@ -62,11 +111,9 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Invalid email or password" });
     }
 
-    const token = jwt.sign(
-      { id: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
 
     res.status(200).json({
       message: "Login successful",
@@ -78,7 +125,10 @@ router.post("/login", async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({
+      message: "Server error",
+      error: error.message,
+    });
   }
 });
 
