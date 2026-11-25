@@ -1,7 +1,20 @@
 # SignFlow - Document Signature Workflow App
 
-🔗 **Live Demo:** https://document-signature-app-murex.vercel.app/
-📂 **GitHub Repository:** https://github.com/Saumya-01git/Document-Signature-App
+🔗 **Live Demo:** https://document-signature-app-murex.vercel.app/  
+📂 **GitHub Repository:** https://github.com/Saumya-01git/Document-Signature-App  
+
+---
+
+## 📸 Application Screenshots
+
+### 1. Modern Authentication (JWT & Password Security)
+![SignFlow Authentication](screenshots/authentication.png)
+
+### 2. Document Management & Dashboard
+![SignFlow Dashboard](screenshots/dashboard.png)
+
+### 3. Sequential Workflow, Signing Progress & Audit Trail
+![SignFlow Workflow & Progress](screenshots/workflow-progress.png)
 
 ---
 
@@ -54,7 +67,6 @@ SignFlow follows a sequential document signing process:
 1. The document owner uploads a PDF.
 2. The owner places a signature position on the PDF.
 3. The owner creates a workflow by entering:
-
    * Signer email(s)
    * Optional witness email
    * Optional approver email
@@ -70,7 +82,7 @@ SignFlow follows a sequential document signing process:
 
 ### Frontend
 
-* React.js
+* React.js (v19)
 * Vite
 * Tailwind CSS
 * Axios
@@ -87,7 +99,7 @@ SignFlow follows a sequential document signing process:
 * Bcrypt.js
 * Multer
 * PDF-Lib
-* Nodemailer / Brevo Email API
+* Resend / Brevo Email API
 
 ### Deployment
 
@@ -136,6 +148,13 @@ Document-Signature-App/
 │   ├── uploads/
 │   ├── server.js
 │   └── package.json
+│
+├── screenshots/
+│   ├── authentication.png
+│   ├── dashboard.png
+│   └── workflow-progress.png
+│
+└── README.md
 ```
 
 ---
@@ -151,6 +170,7 @@ JWT_SECRET=your_jwt_secret
 CLIENT_URL=https://document-signature-app-murex.vercel.app
 EMAIL_USER=your_sender_email
 BREVO_API_KEY=your_brevo_api_key
+RESEND_API_KEY=your_resend_api_key
 ```
 
 ### Client `.env`
@@ -315,9 +335,9 @@ The project currently supports:
 
 ## 👩‍💻 Developed By
 
-**Saumya**
-B.Tech Computer Science and Engineering
-VIT Chennai
+**Saumya**  
+B.Tech Computer Science and Engineering  
+VIT Chennai  
 
 ---
 
